@@ -14,7 +14,11 @@ function SeverityTag({ severity }: { severity: "low" | "medium" | "high" }) {
   );
 }
 
-export function FindingsList({ findings }: { findings: FindingSnapshot[] }) {
+export type FindingsListProps = {
+  findings: FindingSnapshot[];
+};
+
+export function FindingsList({ findings }: FindingsListProps) {
   return (
     <ul className="mt-4 space-y-3">
       {findings.map((finding) => (

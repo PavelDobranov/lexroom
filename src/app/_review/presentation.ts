@@ -62,8 +62,7 @@ export function describeAllowanceAvailability(
     return {
       canRequest: false,
       reason: "exhausted",
-      message:
-        "All ten reviews for this month have completed. Capacity returns next month (UTC).",
+      message: `All ${allowance.limit} reviews for this month have completed. Capacity returns next month (UTC).`,
     };
   }
 

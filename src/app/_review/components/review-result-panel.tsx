@@ -12,26 +12,22 @@ import { reviewQueryOptions } from "../query";
 import { FindingsList } from "./findings-list";
 import { ModalShell } from "./modal-shell";
 
+export type ReviewResultPanelProps = {
+  latestReviewId: string;
+  latestSuccessfulReviewId: string | null;
+  onClose: () => void;
+  onRetry: (documentId: string) => void;
+};
+
 export function ReviewResultPanel({
   latestReviewId,
   latestSuccessfulReviewId,
   onClose,
   onRetry,
-}: {
-  latestReviewId: string;
-  latestSuccessfulReviewId: string | null;
-  onClose: () => void;
-  onRetry: (documentId: string) => void;
-}) {
+}: ReviewResultPanelProps) {
   const queryClient = useQueryClient();
-  const latestQuery = useQuery(
-    reviewQueryOptions(latestReviewId, { enabled: true }),
-  );
-  const previousQuery = useQuery(
-    reviewQueryOptions(latestSuccessfulReviewId ?? "", {
-      enabled: latestSuccessfulReviewId !== null,
-    }),
-  );
+  const latestQuery = useQuery(reviewQueryOptions(latestReviewId));
+  const previousQuery = useQuery(reviewQueryOptions(latestSuccessfulReviewId));
   const latestStatus = latestQuery.data?.status;
 
   useEffect(() => {

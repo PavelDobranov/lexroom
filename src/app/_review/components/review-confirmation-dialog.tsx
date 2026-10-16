@@ -2,12 +2,21 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import type { WorkspaceSnapshot } from "../../../shared/api";
 import { WORKSPACE_QUERY_KEY } from "../../_workspace/query";
+import { ReviewApiError } from "../api";
 import { describeAllowanceAvailability } from "../presentation";
-import { ReviewRequestError, submitReviewRequest } from "../query";
+import { submitReviewRequest } from "../request-coordinator";
 import { ModalShell } from "./modal-shell";
 
 type Lawyer = WorkspaceSnapshot["lawyers"][number];
 type Document = WorkspaceSnapshot["documents"][number];
+
+export type ReviewConfirmationDialogProps = {
+  document: Document;
+  lawyer: Lawyer;
+  allowance: WorkspaceSnapshot["monthlyAllowance"];
+  onClose: () => void;
+  onCreated: (reviewId: string) => void;
+};
 
 export function ReviewConfirmationDialog({
   document,
@@ -15,13 +24,7 @@ export function ReviewConfirmationDialog({
   allowance,
   onClose,
   onCreated,
-}: {
-  document: Document;
-  lawyer: Lawyer;
-  allowance: WorkspaceSnapshot["monthlyAllowance"];
-  onClose: () => void;
-  onCreated: (reviewId: string) => void;
-}) {
+}: ReviewConfirmationDialogProps) {
   const queryClient = useQueryClient();
   const availability = describeAllowanceAvailability(allowance);
 
@@ -37,14 +40,14 @@ export function ReviewConfirmationDialog({
       onCreated(review.id);
     },
     onError: () => {
-      // Admission conflicts leave the dialog open and refresh the workspace;
-      // the server stays authoritative when the visible snapshot is stale.
+      // Keep the dialog open and refresh potentially stale workspace data;
+      // the server remains authoritative after any rejected request.
       void queryClient.invalidateQueries({ queryKey: WORKSPACE_QUERY_KEY });
     },
   });
 
-  const conflictMessage =
-    mutation.error instanceof ReviewRequestError
+  const requestErrorMessage =
+    mutation.error instanceof ReviewApiError
       ? mutation.error.message
       : mutation.isError
         ? "The review could not be requested."
@@ -86,9 +89,9 @@ export function ReviewConfirmationDialog({
           {availability.message}
         </p>
       )}
-      {conflictMessage && (
+      {requestErrorMessage && (
         <p className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900" role="alert">
-          {conflictMessage}
+          {requestErrorMessage}
         </p>
       )}
 

@@ -1,177 +1,38 @@
-import type { Query } from "@tanstack/react-query";
+import { skipToken, type Query } from "@tanstack/react-query";
 
-import type { ApiError, ReviewSnapshot } from "../../shared/api";
+import type { ReviewSnapshot } from "../../shared/api";
+import { fetchReview } from "./api";
+
+export { fetchReview };
+export {
+  requestReview,
+  ReviewApiError,
+  ReviewRequestError,
+  type RequestReviewInput,
+  type SendReviewRequestInput,
+} from "./api";
+export {
+  createReviewRequestCoordinator,
+  submitReviewRequest,
+  type SubmitReviewIntent,
+} from "./request-coordinator";
 
 export const REVIEW_POLL_INTERVAL_MS = 1_000;
 
-export function reviewQueryKey(reviewId: string) {
+export function reviewQueryKey(reviewId: string | null) {
   return ["review", reviewId] as const;
 }
 
-export class ReviewRequestError extends Error {
-  readonly code: string | null;
-  readonly status: number | null;
-
-  constructor(message: string, code: string | null, status: number | null) {
-    super(message);
-    this.name = "ReviewRequestError";
-    this.code = code;
-    this.status = status;
-  }
-}
-
-async function readApiError(
-  response: Response,
-  fallback: string,
-): Promise<ReviewRequestError> {
-  let message = fallback;
-  let code: string | null = null;
-
-  try {
-    const body = (await response.json()) as ApiError;
-
-    if (body.error?.message) {
-      message = body.error.message;
-    }
-
-    if (body.error?.code) {
-      code = body.error.code;
-    }
-  } catch {
-    // Keep the safe fallback when the server does not return JSON.
-  }
-
-  return new ReviewRequestError(message, code, response.status);
-}
-
-export async function fetchReview(reviewId: string): Promise<ReviewSnapshot> {
-  const response = await fetch(`/api/reviews/${encodeURIComponent(reviewId)}`, {
-    cache: "no-store",
-    headers: { Accept: "application/json" },
-  });
-
-  if (!response.ok) {
-    throw await readApiError(response, "The review could not be loaded.");
-  }
-
-  return (await response.json()) as ReviewSnapshot;
-}
-
-export type RequestReviewInput = {
-  documentId: string;
-  requestedByLawyerId: string;
-  requestId: string;
-};
-
-export async function requestReview(
-  input: RequestReviewInput,
-): Promise<ReviewSnapshot> {
-  const response = await fetch(
-    `/api/documents/${encodeURIComponent(input.documentId)}/reviews`,
-    {
-      method: "POST",
-      cache: "no-store",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        requestedByLawyerId: input.requestedByLawyerId,
-        requestId: input.requestId,
-      }),
-    },
-  );
-
-  if (!response.ok) {
-    throw await readApiError(response, "The review could not be requested.");
-  }
-
-  return (await response.json()) as ReviewSnapshot;
-}
-
-type ReviewIntent = Omit<RequestReviewInput, "requestId"> & {
-  baselineLatestReviewId: string | null;
-};
-
-type ReviewRequestCoordinatorOptions = {
-  createRequestId?: () => string;
-  send?: (input: RequestReviewInput) => Promise<ReviewSnapshot>;
-};
-
-export function createReviewRequestCoordinator(
-  options: ReviewRequestCoordinatorOptions = {},
+export function reviewQueryOptions(
+  reviewId: string | null,
+  options?: { enabled: boolean },
 ) {
-  const createRequestId = options.createRequestId ?? (() => crypto.randomUUID());
-  const send = options.send ?? requestReview;
-  const unresolvedByIntent = new Map<
-    string,
-    { requestId: string; baselineLatestReviewId: string | null }
-  >();
-  const keyFor = (input: ReviewIntent) =>
-    `${input.documentId}\u0000${input.requestedByLawyerId}`;
+  const enabled = reviewId !== null && (options?.enabled ?? true);
 
-  async function submit(input: ReviewIntent): Promise<ReviewSnapshot> {
-    const key = keyFor(input);
-    const existing = unresolvedByIntent.get(key);
-    const requestId = existing?.requestId ?? createRequestId();
-
-    unresolvedByIntent.set(key, existing ?? {
-      requestId,
-      baselineLatestReviewId: input.baselineLatestReviewId,
-    });
-
-    try {
-      const review = await send({
-        documentId: input.documentId,
-        requestedByLawyerId: input.requestedByLawyerId,
-        requestId,
-      });
-
-      if (unresolvedByIntent.get(key)?.requestId === requestId) {
-        unresolvedByIntent.delete(key);
-      }
-
-      if (
-        existing &&
-        input.baselineLatestReviewId !== existing.baselineLatestReviewId &&
-        review.status !== "running"
-      ) {
-        return submit(input);
-      }
-
-      return review;
-    } catch (error) {
-      const status = error instanceof ReviewRequestError ? error.status : null;
-
-      if (status !== null && status < 500) {
-        if (unresolvedByIntent.get(key)?.requestId === requestId) {
-          unresolvedByIntent.delete(key);
-        }
-      }
-
-      throw error;
-    }
-  }
-
-  return {
-    submit,
-    unresolvedRequestId(input: ReviewIntent): string | null {
-      return unresolvedByIntent.get(keyFor(input))?.requestId ?? null;
-    },
-  };
-}
-
-const reviewRequestCoordinator = createReviewRequestCoordinator();
-
-export function submitReviewRequest(input: ReviewIntent): Promise<ReviewSnapshot> {
-  return reviewRequestCoordinator.submit(input);
-}
-
-export function reviewQueryOptions(reviewId: string, options: { enabled: boolean }) {
   return {
     queryKey: reviewQueryKey(reviewId),
-    queryFn: () => fetchReview(reviewId),
-    enabled: options.enabled,
+    queryFn: reviewId === null ? skipToken : () => fetchReview(reviewId),
+    enabled,
     refetchInterval: (query: Query<ReviewSnapshot>) =>
       query.state.data?.status === "running" ? REVIEW_POLL_INTERVAL_MS : false,
     refetchIntervalInBackground: false,

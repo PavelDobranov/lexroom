@@ -1,14 +1,16 @@
 import { useEffect, type ReactNode } from "react";
 
+export type ModalShellProps = {
+  labelledBy: string;
+  onClose: () => void;
+  children: ReactNode;
+};
+
 export function ModalShell({
   labelledBy,
   onClose,
   children,
-}: {
-  labelledBy: string;
-  onClose: () => void;
-  children: ReactNode;
-}) {
+}: ModalShellProps) {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
