@@ -60,27 +60,37 @@ function launchOrFail(
   review: ReviewSnapshot,
   documentId: string,
 ): ReviewSnapshot {
+  if (review.status !== "running") return review;
   try {
-    if (review.status !== "running") return review;
     dependencies.launchReview({
       reviewId: review.id,
       documentId,
       deadlineAt: review.deadlineAt,
     });
-    return review;
   } catch (error) {
     dependencies.logger.error("Failed to launch the review", error);
+    try {
+      const failed = withDatabase(dependencies.openWorkspaceDatabase, (sqlite) =>
+        new ReviewService(sqlite, dependencies.now).fail(review.id, "ai_error"),
+      );
+      return failed ?? review;
+    } catch (failError) {
+      dependencies.logger.error(
+        "Failed to transition an unlaunched review to failed",
+        failError,
+      );
+      return review;
+    }
   }
+
+  // Foreseeable runner launch failures transition internally instead of
+  // throwing. Re-read so the create response is authoritative in that case.
   try {
-    const failed = withDatabase(dependencies.openWorkspaceDatabase, (sqlite) =>
-      new ReviewService(sqlite, dependencies.now).fail(review.id, "ai_error"),
-    );
-    return failed ?? review;
-  } catch (failError) {
-    dependencies.logger.error(
-      "Failed to transition an unlaunched review to failed",
-      failError,
-    );
+    return withDatabase(dependencies.openWorkspaceDatabase, (sqlite) =>
+      new ReviewService(sqlite, dependencies.now).read(review.id),
+    ) ?? review;
+  } catch (error) {
+    dependencies.logger.error("Failed to read the launched review", error);
     return review;
   }
 }

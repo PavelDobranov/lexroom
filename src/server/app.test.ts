@@ -304,6 +304,27 @@ describe("POST /api/documents/:documentId/reviews", () => {
     });
   });
 
+  it("returns the failed snapshot when the runner handles a launch failure internally", async () => {
+    const launchReview = vi.fn(({ reviewId }: { reviewId: string }) => {
+      withConnection((sqlite) =>
+        new ReviewService(sqlite, () => REVIEW_NOW).fail(reviewId, "ai_error"),
+      );
+    });
+    const response = await post(apiFor(REVIEW_NOW, { launchReview }), documentId, {
+      requestedByLawyerId: lawyerId,
+      requestId: crypto.randomUUID(),
+    });
+
+    expect(response.status).toBe(201);
+    const review = (await response.json()) as ReviewSnapshot;
+    expect(review.status).toBe("failed");
+    if (review.status === "failed") {
+      expect(review.failureReason).toBe("ai_error");
+      expect("findings" in review).toBe(false);
+      expect("partialFindings" in review).toBe(false);
+    }
+  });
+
   it("replays a matching request ID with 200 and no second launch", async () => {
     const launchReview = vi.fn();
     const api = apiFor(REVIEW_NOW, { launchReview });
