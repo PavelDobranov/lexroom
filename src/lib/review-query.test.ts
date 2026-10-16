@@ -1,8 +1,9 @@
-import type { Query } from "@tanstack/react-query";
+import { QueryClient, type Query } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { ReviewSnapshot } from "../shared/api";
 import {
+  createReviewRequestCoordinator,
   fetchReview,
   requestReview,
   ReviewRequestError,
@@ -117,6 +118,63 @@ describe("requestReview", () => {
   });
 });
 
+describe("review request coordination", () => {
+  const intent = {
+    documentId: "doc-1",
+    requestedByLawyerId: "lawyer-1",
+  };
+
+  it("reuses a sent request ID after network and 5xx ambiguity", async () => {
+    const sentIds: string[] = [];
+    const outcomes: Array<Error | ReviewSnapshot> = [
+      new TypeError("network failed"),
+      new ReviewRequestError("Unavailable", "REVIEW_SERVICE_UNAVAILABLE", 503),
+      runningSnapshot,
+    ];
+    const coordinator = createReviewRequestCoordinator({
+      createRequestId: () => "request-1",
+      send: vi.fn(async ({ requestId }) => {
+        sentIds.push(requestId);
+        const outcome = outcomes.shift()!;
+        if (outcome instanceof Error) throw outcome;
+        return outcome;
+      }),
+    });
+
+    await expect(coordinator.submit(intent)).rejects.toThrow("network failed");
+    expect(coordinator.unresolvedRequestId(intent)).toBe("request-1");
+    await expect(coordinator.submit(intent)).rejects.toMatchObject({ status: 503 });
+    expect(coordinator.unresolvedRequestId(intent)).toBe("request-1");
+    await expect(coordinator.submit(intent)).resolves.toEqual(runningSnapshot);
+
+    expect(sentIds).toEqual(["request-1", "request-1", "request-1"]);
+    expect(coordinator.unresolvedRequestId(intent)).toBeNull();
+  });
+
+  it("uses a new ID after a known outcome or a completed submission", async () => {
+    const ids = ["request-1", "request-2", "request-3"];
+    const sentIds: string[] = [];
+    let attempt = 0;
+    const coordinator = createReviewRequestCoordinator({
+      createRequestId: () => ids.shift()!,
+      send: vi.fn(async ({ requestId }) => {
+        sentIds.push(requestId);
+        attempt += 1;
+        if (attempt === 1) {
+          throw new ReviewRequestError("Conflict", "REQUEST_ID_CONFLICT", 409);
+        }
+        return runningSnapshot;
+      }),
+    });
+
+    await expect(coordinator.submit(intent)).rejects.toMatchObject({ status: 409 });
+    await expect(coordinator.submit(intent)).resolves.toEqual(runningSnapshot);
+    await expect(coordinator.submit(intent)).resolves.toEqual(runningSnapshot);
+
+    expect(sentIds).toEqual(["request-1", "request-2", "request-3"]);
+  });
+});
+
 describe("reviewQueryOptions", () => {
   const queryWith = (data: ReviewSnapshot | undefined) =>
     ({ state: { data } }) as unknown as Query<ReviewSnapshot>;
@@ -143,6 +201,43 @@ describe("reviewQueryOptions", () => {
       ),
     ).toBe(false);
     expect(options.refetchInterval(queryWith(undefined))).toBe(false);
+  });
+
+  it("retains the last snapshot after a polling error and recovers later", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            error: { code: "INTERNAL_ERROR", message: "Please try again." },
+          }),
+          { status: 500, headers: { "Content-Type": "application/json" } },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(runningSnapshot), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const key = reviewQueryKey(runningSnapshot.id);
+    queryClient.setQueryData(key, runningSnapshot);
+    const options = reviewQueryOptions(runningSnapshot.id, { enabled: true });
+
+    await expect(
+      queryClient.fetchQuery({ ...options, retry: false }),
+    ).rejects.toMatchObject({ status: 500 });
+    expect(queryClient.getQueryData(key)).toEqual(runningSnapshot);
+    expect(queryClient.getQueryState(key)?.status).toBe("error");
+
+    await expect(
+      queryClient.fetchQuery({ ...options, retry: false }),
+    ).resolves.toEqual(runningSnapshot);
+    expect(queryClient.getQueryState(key)?.status).toBe("success");
   });
 
   it("respects the enabled flag", () => {

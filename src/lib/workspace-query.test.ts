@@ -1,3 +1,4 @@
+import { QueryClient } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { WorkspaceSnapshot } from "../shared/api";
@@ -71,6 +72,40 @@ describe("workspace query", () => {
     await expect(fetchWorkspace()).rejects.toEqual(
       new WorkspaceRequestError("The workspace could not be loaded."),
     );
+  });
+
+  it("retains the last snapshot after a polling error and recovers later", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response("unavailable", { status: 503 }))
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(snapshot), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    queryClient.setQueryData(WORKSPACE_QUERY_OPTIONS.queryKey, snapshot);
+
+    await expect(
+      queryClient.fetchQuery({ ...WORKSPACE_QUERY_OPTIONS, retry: false }),
+    ).rejects.toBeInstanceOf(WorkspaceRequestError);
+    expect(queryClient.getQueryData(WORKSPACE_QUERY_OPTIONS.queryKey)).toEqual(
+      snapshot,
+    );
+    expect(
+      queryClient.getQueryState(WORKSPACE_QUERY_OPTIONS.queryKey)?.status,
+    ).toBe("error");
+
+    await expect(
+      queryClient.fetchQuery({ ...WORKSPACE_QUERY_OPTIONS, retry: false }),
+    ).resolves.toEqual(snapshot);
+    expect(
+      queryClient.getQueryState(WORKSPACE_QUERY_OPTIONS.queryKey)?.status,
+    ).toBe("success");
   });
 
   it("polls every five seconds only in the foreground and refetches on focus", () => {

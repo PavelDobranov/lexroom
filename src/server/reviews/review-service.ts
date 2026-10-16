@@ -402,6 +402,25 @@ export class ReviewService {
     return expire.immediate();
   }
 
+  /**
+   * Fails every Review inherited from an earlier process. This intentionally
+   * does not apply deadline semantics: anything still running at process start
+   * was interrupted, even if its deadline elapsed while the process was down.
+   */
+  interruptRunningReviews(): void {
+    const interrupt = this.sqlite.transaction(() => {
+      const interruptedAt = toIsoUtc(this.now());
+      this.sqlite
+        .prepare(`
+          update reviews
+          set status = 'failed', failed_at = ?, failure_reason = 'interrupted'
+          where status = 'running'
+        `)
+        .run(interruptedAt);
+    });
+    interrupt.immediate();
+  }
+
   /** Reconciles every overdue running review, releasing its reservation. */
   expireOverdueReviews(): void {
     const expire = this.sqlite.transaction(() => {

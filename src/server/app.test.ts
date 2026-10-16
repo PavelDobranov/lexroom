@@ -27,6 +27,7 @@ function apiFor(
   now: Date,
   overrides: {
     logger?: Pick<Console, "error">;
+    initializeRuntime?: () => Promise<void>;
     launchReview?: (input: {
       reviewId: string;
       documentId: string;
@@ -40,6 +41,7 @@ function apiFor(
       overrides.openWorkspaceDatabase ?? (() => openDatabase(databasePath)),
     now: () => now,
     logger: overrides.logger ?? { error: vi.fn() },
+    initializeRuntime: overrides.initializeRuntime ?? vi.fn().mockResolvedValue(undefined),
     launchReview: overrides.launchReview ?? vi.fn(),
   });
 }
@@ -168,8 +170,8 @@ describe("GET /api/workspace", () => {
     expect(response.headers.get("Cache-Control")).toBe("no-store");
     expect(await response.json()).toEqual({
       error: {
-        code: "WORKSPACE_UNAVAILABLE",
-        message: "Workspace data is unavailable.",
+        code: "INTERNAL_ERROR",
+        message: "Something went wrong. Please try again.",
       },
     });
     expect(logger.error).toHaveBeenCalledWith(
@@ -188,8 +190,8 @@ describe("GET /api/workspace", () => {
     expect(response.status).toBe(500);
     expect(await response.json()).toEqual({
       error: {
-        code: "WORKSPACE_UNAVAILABLE",
-        message: "Workspace data is unavailable.",
+        code: "INTERNAL_ERROR",
+        message: "Something went wrong. Please try again.",
       },
     });
 
@@ -210,12 +212,46 @@ describe("GET /api/workspace", () => {
 });
 
 describe("GET /api/health", () => {
-  it("remains available without workspace storage", async () => {
-    const response = await apiFor(new Date()).request("/api/health");
+  it("remains available without storage or runtime initialization", async () => {
+    const initializeRuntime = vi.fn().mockRejectedValue(new Error("unavailable"));
+    const response = await apiFor(new Date(), { initializeRuntime }).request(
+      "/api/health",
+    );
 
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ status: "ok" });
+    expect(initializeRuntime).not.toHaveBeenCalled();
     expect(existsSync(databasePath)).toBe(false);
+  });
+});
+
+describe("review runtime initialization boundary", () => {
+  it("initializes before workspace and Review storage access", async () => {
+    setupDatabase(databasePath);
+    let initialized = false;
+    const initializeRuntime = vi.fn(async () => {
+      initialized = true;
+    });
+    const openWorkspaceDatabase = () => {
+      if (!initialized) throw new Error("storage opened before initialization");
+      return openDatabase(databasePath);
+    };
+    const api = apiFor(new Date("2026-10-16T12:00:00.000Z"), {
+      initializeRuntime,
+      openWorkspaceDatabase,
+    });
+
+    expect((await api.request("/api/workspace")).status).toBe(200);
+    expect((await api.request("/api/reviews/missing")).status).toBe(404);
+    expect(
+      (
+        await post(api, documentId, {
+          requestedByLawyerId: lawyerId,
+          requestId: crypto.randomUUID(),
+        })
+      ).status,
+    ).toBe(201);
+    expect(initializeRuntime).toHaveBeenCalledTimes(3);
   });
 });
 
@@ -494,18 +530,34 @@ describe("GET /api/reviews/:reviewId", () => {
 });
 
 describe("review endpoint infrastructure failures", () => {
-  it("maps temporary SQLite unavailability to a safe 503", async () => {
+  it("maps temporary SQLite unavailability to a safe logged 503", async () => {
+    const logger = { error: vi.fn() };
+    const lockedDatabase = () => {
+      const error = new Error("database is locked with internal detail");
+      (error as { code?: string }).code = "SQLITE_BUSY_TIMEOUT";
+      throw error;
+    };
     const api = apiFor(REVIEW_NOW, {
-      openWorkspaceDatabase: () => {
-        const error = new Error("database is locked");
-        (error as { code?: string }).code = "SQLITE_BUSY";
-        throw error;
-      },
+      logger,
+      openWorkspaceDatabase: lockedDatabase,
     });
 
-    const response = await api.request("/api/reviews/any");
-    expect(response.status).toBe(503);
-    expect((await response.json()).error.code).toBe("REVIEW_SERVICE_UNAVAILABLE");
+    for (const request of [
+      () => api.request("/api/workspace"),
+      () => api.request("/api/reviews/any"),
+      () =>
+        post(api, documentId, {
+          requestedByLawyerId: lawyerId,
+          requestId: crypto.randomUUID(),
+        }),
+    ]) {
+      const response = await request();
+      expect(response.status).toBe(503);
+      const serialized = JSON.stringify(await response.json());
+      expect(serialized).toContain("REVIEW_SERVICE_UNAVAILABLE");
+      expect(serialized).not.toContain("internal detail");
+    }
+    expect(logger.error).toHaveBeenCalledTimes(3);
   });
 
   it("maps unexpected failures to a safe 500 and logs server-side", async () => {
