@@ -57,7 +57,7 @@ export function ReviewResultPanel({
         {latestSuccessfulReviewId && (
           <section className="mt-6 border-t border-slate-200 pt-6" aria-labelledby="previous-review-title">
             <h3 id="previous-review-title" className="text-sm font-semibold text-slate-950">
-              Previous completed review.
+              Previous completed review
             </h3>
             <div className="mt-3">
               <PreviousCompletedReviewBody query={previousQuery} />

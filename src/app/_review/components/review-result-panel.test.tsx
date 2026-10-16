@@ -57,7 +57,7 @@ describe("ReviewResultPanel", () => {
 
     expect(markup).toContain("Review in progress — preliminary findings");
     expect(markup).toContain("Not final");
-    expect(markup).toContain("Previous completed review.");
+    expect(markup).toContain("Previous completed review");
     expect(markup).toContain("No issues flagged.");
   });
 
@@ -76,7 +76,7 @@ describe("ReviewResultPanel", () => {
 
     expect(markup).toContain("The review failed. Please try again.");
     expect(markup).toContain("Review again");
-    expect(markup).toContain("Previous completed review.");
+    expect(markup).toContain("Previous completed review");
     expect(markup).not.toContain("preliminary findings");
   });
 
@@ -110,7 +110,7 @@ describe("ReviewResultPanel", () => {
       },
     );
 
-    expect(markup).toContain("Previous completed review.");
+    expect(markup).toContain("Previous completed review");
     expect(markup).toContain("Loading the completed review…");
     expect(markup).not.toContain("Cached preliminary finding");
     expect(markup).not.toContain("This must not be shown as completed.");
@@ -120,6 +120,6 @@ describe("ReviewResultPanel", () => {
     const markup = renderPanel(previousSuccess);
 
     expect(markup).toContain("No issues flagged.");
-    expect(markup).not.toContain("Previous completed review.");
+    expect(markup).not.toContain("Previous completed review");
   });
 });
