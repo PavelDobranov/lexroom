@@ -44,7 +44,19 @@ export const documents = sqliteTable(
     ),
     check(
       "documents_uploaded_at_iso_8601_utc",
-      sql`${table.uploadedAt} glob '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T[0-9][0-9]:[0-9][0-9]:[0-9][0-9]Z' and datetime(${table.uploadedAt}) is not null`,
+      sql`
+        substr(${table.uploadedAt}, 1, 19) glob '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T[0-9][0-9]:[0-9][0-9]:[0-9][0-9]'
+        and strftime('%Y-%m-%dT%H:%M:%S', unixepoch(${table.uploadedAt}), 'unixepoch') = substr(${table.uploadedAt}, 1, 19)
+        and (
+          (length(${table.uploadedAt}) = 20 and substr(${table.uploadedAt}, 20, 1) = 'Z')
+          or (
+            length(${table.uploadedAt}) > 21
+            and substr(${table.uploadedAt}, 20, 1) = '.'
+            and substr(${table.uploadedAt}, -1, 1) = 'Z'
+            and substr(${table.uploadedAt}, 21, length(${table.uploadedAt}) - 21) not glob '*[^0-9]*'
+          )
+        )
+      `,
     ),
   ],
 );

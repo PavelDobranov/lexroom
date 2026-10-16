@@ -44,6 +44,42 @@ describe("database setup", () => {
       expect(
         sqlite.prepare("select count(*) as count from documents").get(),
       ).toEqual({ count: documentFixtures.length });
+
+      expect(
+        sqlite
+          .prepare(`
+            select id, name, title from lawyers order by id
+          `)
+          .all(),
+      ).toEqual([...lawyerFixtures].sort((left, right) => left.id.localeCompare(right.id)));
+      expect(
+        sqlite
+          .prepare(`
+            select
+              id,
+              title,
+              type,
+              pages,
+              uploaded_at as uploadedAt,
+              uploaded_by_lawyer_id as uploadedByLawyerId,
+              supersedes_document_id as supersedesDocumentId
+            from documents
+            order by id
+          `)
+          .all(),
+      ).toEqual(
+        documentFixtures
+          .map((document) => ({
+            id: document.id,
+            title: document.title,
+            type: document.type,
+            pages: document.pages,
+            uploadedAt: document.uploadedAt,
+            uploadedByLawyerId: document.uploadedBy,
+            supersedesDocumentId: document.supersedes,
+          }))
+          .sort((left, right) => left.id.localeCompare(right.id)),
+      );
     } finally {
       sqlite.close();
     }
@@ -147,6 +183,45 @@ describe("database setup", () => {
     }
   });
 
+  it("rolls back earlier fixture inserts when a document conflicts", () => {
+    setupDatabase(databasePath);
+
+    const conflictingDocument = documentFixtures.at(-1)!;
+    const firstDocument = documentFixtures[0];
+    const sqlite = openDatabase(databasePath);
+    try {
+      sqlite
+        .prepare("delete from documents where id != ?")
+        .run(conflictingDocument.id);
+      sqlite
+        .prepare("update documents set title = ? where id = ?")
+        .run("Conflicting title", conflictingDocument.id);
+    } finally {
+      sqlite.close();
+    }
+
+    expect(() => setupDatabase(databasePath)).toThrowError(
+      new FixtureConflictError("document", conflictingDocument.id),
+    );
+
+    const reopened = openDatabase(databasePath);
+    try {
+      expect(reopened.prepare("select count(*) as count from documents").get()).toEqual(
+        { count: 1 },
+      );
+      expect(
+        reopened.prepare("select title from documents where id = ?").get(
+          conflictingDocument.id,
+        ),
+      ).toEqual({ title: "Conflicting title" });
+      expect(
+        reopened.prepare("select id from documents where id = ?").get(firstDocument.id),
+      ).toBeUndefined();
+    } finally {
+      reopened.close();
+    }
+  });
+
   it("enables and satisfies uploader and supersedes foreign keys", () => {
     setupDatabase(databasePath);
 
@@ -219,22 +294,41 @@ describe("database setup", () => {
             lawyerFixtures[0].id,
           ),
       ).toThrow(/CHECK constraint failed/);
+      const insertDocument = sqlite.prepare(`
+        insert into documents (
+          id, title, type, pages, uploaded_at, uploaded_by_lawyer_id
+        ) values (?, ?, ?, ?, ?, ?)
+      `);
       expect(() =>
-        sqlite
-          .prepare(`
-            insert into documents (
-              id, title, type, pages, uploaded_at, uploaded_by_lawyer_id
-            ) values (?, ?, ?, ?, ?, ?)
-          `)
-          .run(
-            "local-timestamp",
-            "Invalid",
-            "other",
-            1,
-            "2026-01-01 00:00:00",
-            lawyerFixtures[0].id,
-          ),
+        insertDocument.run(
+          "local-timestamp",
+          "Invalid",
+          "other",
+          1,
+          "2026-01-01 00:00:00",
+          lawyerFixtures[0].id,
+        ),
       ).toThrow(/CHECK constraint failed/);
+      expect(() =>
+        insertDocument.run(
+          "impossible-date",
+          "Invalid",
+          "other",
+          1,
+          "2026-02-30T00:00:00Z",
+          lawyerFixtures[0].id,
+        ),
+      ).toThrow(/CHECK constraint failed/);
+      expect(() =>
+        insertDocument.run(
+          "fractional-seconds",
+          "Valid",
+          "other",
+          1,
+          "2026-02-28T00:00:00.123456Z",
+          lawyerFixtures[0].id,
+        ),
+      ).not.toThrow();
     } finally {
       sqlite.close();
     }
