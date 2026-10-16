@@ -368,7 +368,6 @@ function LawyerCard({
 
 function AllowanceCard({ allowance }: { allowance: WorkspaceSnapshot["monthlyAllowance"] }) {
   const used = allowance.completed + allowance.reserved;
-  const usedPercent = allowance.limit === 0 ? 0 : Math.min(100, (used / allowance.limit) * 100);
 
   return (
     <section className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-slate-200/90" aria-labelledby="quota-heading">
@@ -378,10 +377,7 @@ function AllowanceCard({ allowance }: { allowance: WorkspaceSnapshot["monthlyAll
         {used} <span className="text-slate-400">/</span> {allowance.limit}
       </p>
       <p className="text-sm text-slate-500">reviews used</p>
-      <div className="mt-4 h-3 overflow-hidden rounded-full bg-slate-200" aria-hidden="true">
-        <div className="h-full rounded-full bg-blue-600" style={{ width: `${usedPercent}%` }} />
-      </div>
-      <dl className="mt-5 space-y-3 text-sm">
+      <dl className="mt-5 space-y-3 border-t border-slate-100 pt-4 text-sm">
         <div className="flex items-center gap-3">
           <span className="size-2.5 rounded-full bg-blue-600" aria-hidden="true" />
           <dt className="text-slate-600">Completed reviews</dt>
