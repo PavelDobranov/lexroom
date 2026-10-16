@@ -53,7 +53,9 @@ function seed(options: {
   key: string;
 }): void {
   const requestedAt = `${options.month}-15T10:00:00.000Z`;
-  const deadlineAt = `${options.month}-15T10:01:00.000Z`;
+  const deadlineAt = options.status === "running"
+    ? `${options.month}-31T23:59:59.000Z`
+    : `${options.month}-15T10:01:00.000Z`;
   sqlite
     .prepare(`
       insert into reviews (
@@ -287,17 +289,58 @@ describe("finding emission and completion", () => {
     }
   });
 
-  it("rejects findings and completion submitted at or after the deadline", () => {
+  it("permanently times out at exactly 60 seconds and rejects every late callback", () => {
     const created = service().admit(admission());
     if (created.outcome !== "created") throw new Error("expected created");
     const reviewId = created.review.id;
 
     current = new Date("2026-10-16T12:01:00.000Z"); // exactly 60 seconds
-    expect(service().emitFinding(reviewId, finding(0))?.status).toBe("running");
-    const stillRunning = service().complete(reviewId);
-    expect(stillRunning?.status).toBe("running");
-    if (stillRunning?.status === "running") {
-      expect(stillRunning.partialFindings).toEqual([]);
+    const timedOut = service().emitFinding(reviewId, finding(0));
+    expect(timedOut?.status).toBe("failed");
+    if (timedOut?.status === "failed") {
+      expect(timedOut.failureReason).toBe("timed_out");
+      expect("findings" in timedOut).toBe(false);
+      expect("partialFindings" in timedOut).toBe(false);
     }
+
+    expect(service().complete(reviewId)).toEqual(timedOut);
+    expect(service().fail(reviewId, "ai_error")).toEqual(timedOut);
+    expect(service().emitFinding(reviewId, finding(1))).toEqual(timedOut);
+    expect(allowanceCounts("2026-10")).toEqual({ completed: 0, reserved: 0 });
+  });
+
+  it("lets completion win before the deadline and timeout win when processed first", () => {
+    const completedFirst = service().admit(admission({ documentId: documents[0] }));
+    if (completedFirst.outcome !== "created") throw new Error("expected created");
+    current = new Date("2026-10-16T12:00:59.999Z");
+    expect(service().complete(completedFirst.review.id)?.status).toBe("completed");
+    current = new Date("2026-10-16T12:01:00.000Z");
+    expect(service().expire(completedFirst.review.id)?.status).toBe("completed");
+
+    current = new Date("2026-10-16T13:00:00.000Z");
+    const timeoutFirst = service().admit(admission({ documentId: documents[1] }));
+    if (timeoutFirst.outcome !== "created") throw new Error("expected created");
+    current = new Date("2026-10-16T13:01:00.000Z");
+    expect(service().expire(timeoutFirst.review.id)?.status).toBe("failed");
+    expect(service().complete(timeoutFirst.review.id)?.status).toBe("failed");
+  });
+
+  it("lets a Finding win before timeout and rejects it when timeout wins first", () => {
+    const findingFirst = service().admit(admission({ documentId: documents[0] }));
+    if (findingFirst.outcome !== "created") throw new Error("expected created");
+    current = new Date("2026-10-16T12:00:59.999Z");
+    expect(service().emitFinding(findingFirst.review.id, finding(0))?.status).toBe("running");
+    current = new Date("2026-10-16T12:01:00.000Z");
+    const expired = service().expire(findingFirst.review.id);
+    expect(expired?.status).toBe("failed");
+    expect(sqlite.prepare("select count(*) as count from findings where review_id = ?").get(findingFirst.review.id)).toEqual({ count: 1 });
+
+    current = new Date("2026-10-16T14:00:00.000Z");
+    const timeoutFirst = service().admit(admission({ documentId: documents[1] }));
+    if (timeoutFirst.outcome !== "created") throw new Error("expected created");
+    current = new Date("2026-10-16T14:01:00.000Z");
+    service().expire(timeoutFirst.review.id);
+    expect(service().emitFinding(timeoutFirst.review.id, finding(0))?.status).toBe("failed");
+    expect(sqlite.prepare("select count(*) as count from findings where review_id = ?").get(timeoutFirst.review.id)).toEqual({ count: 0 });
   });
 });

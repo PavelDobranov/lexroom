@@ -8,7 +8,7 @@ import type {
   ReviewSnapshot,
 } from "../shared/api";
 import { openDatabase, resolveDatabasePath } from "./db/database";
-import { ReviewService, readReviewSnapshot } from "./reviews/review-service";
+import { ReviewService } from "./reviews/review-service";
 import { launchReview as defaultLaunchReview } from "./reviews/runtime";
 import { readWorkspaceSnapshot } from "./workspace/read-workspace";
 
@@ -16,7 +16,11 @@ type ApiDependencies = {
   openWorkspaceDatabase: () => Database.Database;
   now: () => Date;
   logger: Pick<Console, "error">;
-  launchReview: (input: { reviewId: string; documentId: string }) => void;
+  launchReview: (input: {
+    reviewId: string;
+    documentId: string;
+    deadlineAt: string;
+  }) => void;
 };
 
 const defaultDependencies: ApiDependencies = {
@@ -57,7 +61,12 @@ function launchOrFail(
   documentId: string,
 ): ReviewSnapshot {
   try {
-    dependencies.launchReview({ reviewId: review.id, documentId });
+    if (review.status !== "running") return review;
+    dependencies.launchReview({
+      reviewId: review.id,
+      documentId,
+      deadlineAt: review.deadlineAt,
+    });
     return review;
   } catch (error) {
     dependencies.logger.error("Failed to launch the review", error);
@@ -172,7 +181,10 @@ export function createApi(
     try {
       const snapshot = withDatabase(
         dependencies.openWorkspaceDatabase,
-        (sqlite) => readReviewSnapshot(sqlite, c.req.param("reviewId")),
+        (sqlite) =>
+          new ReviewService(sqlite, dependencies.now).read(
+            c.req.param("reviewId"),
+          ),
       );
       if (!snapshot) {
         return c.json(

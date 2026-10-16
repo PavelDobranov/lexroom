@@ -27,7 +27,11 @@ function apiFor(
   now: Date,
   overrides: {
     logger?: Pick<Console, "error">;
-    launchReview?: (input: { reviewId: string; documentId: string }) => void;
+    launchReview?: (input: {
+      reviewId: string;
+      documentId: string;
+      deadlineAt: string;
+    }) => void;
     openWorkspaceDatabase?: () => ReturnType<typeof openDatabase>;
   } = {},
 ) {
@@ -293,7 +297,11 @@ describe("POST /api/documents/:documentId/reviews", () => {
     expect(review.status).toBe("running");
     expect(review.allowanceMonth).toBe("2026-10");
     expect(launchReview).toHaveBeenCalledTimes(1);
-    expect(launchReview).toHaveBeenCalledWith({ reviewId: review.id, documentId });
+    expect(launchReview).toHaveBeenCalledWith({
+      reviewId: review.id,
+      documentId,
+      deadlineAt: "2026-10-16T12:01:00.000Z",
+    });
   });
 
   it("replays a matching request ID with 200 and no second launch", async () => {
@@ -439,6 +447,20 @@ describe("GET /api/reviews/:reviewId", () => {
     expect(snapshot.status).toBe("failed");
     expect("findings" in snapshot).toBe(false);
     expect("partialFindings" in snapshot).toBe(false);
+  });
+
+  it("expires an overdue Review before returning its snapshot", async () => {
+    const reviewId = admitDirect();
+    const response = await apiFor(
+      new Date("2026-10-16T12:01:00.000Z"),
+    ).request(`/api/reviews/${reviewId}`);
+
+    const snapshot = (await response.json()) as ReviewSnapshot;
+    expect(snapshot.status).toBe("failed");
+    if (snapshot.status === "failed") {
+      expect(snapshot.failureReason).toBe("timed_out");
+      expect(snapshot.failedAt).toBe("2026-10-16T12:01:00.000Z");
+    }
   });
 
   it("returns 404 REVIEW_NOT_FOUND for an unknown review", async () => {

@@ -191,6 +191,10 @@ function WorkspaceReady({
         <ReviewResultPanel
           reviewId={openReviewId}
           onClose={() => setOpenReviewId(null)}
+          onRetry={(documentId) => {
+            setOpenReviewId(null);
+            setDialogDocumentId(documentId);
+          }}
         />
       )}
     </main>

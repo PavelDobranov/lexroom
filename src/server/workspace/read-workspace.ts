@@ -6,7 +6,11 @@ import type {
   ReviewSummary,
   WorkspaceSnapshot,
 } from "../../shared/api";
-import { MONTHLY_REVIEW_LIMIT, utcMonth } from "../reviews/review-service";
+import {
+  MONTHLY_REVIEW_LIMIT,
+  ReviewService,
+  utcMonth,
+} from "../reviews/review-service";
 
 type PersistedDocument = {
   id: string;
@@ -132,6 +136,8 @@ export function readWorkspaceSnapshot(
   sqlite: Database.Database,
   now: Date,
 ): WorkspaceSnapshot {
+  new ReviewService(sqlite, () => now).expireOverdueReviews();
+
   const lawyers = sqlite
     .prepare<
       [],
