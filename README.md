@@ -309,7 +309,7 @@ Expired reviews are also reconciled when relevant state is read or modified. Lat
 
 ## Time spent
 
-**Approximately 8 hours of active work**, exceeding the suggested four-hour timebox.
+**Roughly 6.5–7 hours of active work**, exceeding the suggested four-hour timebox.
 
 This estimate is reconstructed from Git commit history and recorded AI development sessions rather than precise time tracking.
 
