@@ -1,0 +1,460 @@
+{
+  "version": "6",
+  "dialect": "sqlite",
+  "id": "769f54c1-0427-4b10-8a3c-ca07aa12b754",
+  "prevId": "c5c5d924-bf13-4ab1-ac78-54cf94d73fc2",
+  "tables": {
+    "documents": {
+      "name": "documents",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "type": {
+          "name": "type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "pages": {
+          "name": "pages",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "uploaded_at": {
+          "name": "uploaded_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "uploaded_by_lawyer_id": {
+          "name": "uploaded_by_lawyer_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "supersedes_document_id": {
+          "name": "supersedes_document_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "documents_uploaded_by_lawyer_id_lawyers_id_fk": {
+          "name": "documents_uploaded_by_lawyer_id_lawyers_id_fk",
+          "tableFrom": "documents",
+          "tableTo": "lawyers",
+          "columnsFrom": [
+            "uploaded_by_lawyer_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "documents_supersedes_document_id_documents_id_fk": {
+          "name": "documents_supersedes_document_id_documents_id_fk",
+          "tableFrom": "documents",
+          "tableTo": "documents",
+          "columnsFrom": [
+            "supersedes_document_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "documents_title_non_empty": {
+          "name": "documents_title_non_empty",
+          "value": "length(trim(\"documents\".\"title\")) > 0"
+        },
+        "documents_type_non_empty": {
+          "name": "documents_type_non_empty",
+          "value": "length(trim(\"documents\".\"type\")) > 0"
+        },
+        "documents_pages_positive_integer": {
+          "name": "documents_pages_positive_integer",
+          "value": "typeof(\"documents\".\"pages\") = 'integer' and \"documents\".\"pages\" > 0"
+        },
+        "documents_uploaded_at_iso_8601_utc": {
+          "name": "documents_uploaded_at_iso_8601_utc",
+          "value": "\n        substr(\"documents\".\"uploaded_at\", 1, 19) glob '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T[0-9][0-9]:[0-9][0-9]:[0-9][0-9]'\n        and unixepoch(\"documents\".\"uploaded_at\") is not null\n        and strftime('%Y-%m-%dT%H:%M:%S', unixepoch(\"documents\".\"uploaded_at\"), 'unixepoch') = substr(\"documents\".\"uploaded_at\", 1, 19)\n        and (\n          (length(\"documents\".\"uploaded_at\") = 20 and substr(\"documents\".\"uploaded_at\", 20, 1) = 'Z')\n          or (\n            length(\"documents\".\"uploaded_at\") > 21\n            and substr(\"documents\".\"uploaded_at\", 20, 1) = '.'\n            and substr(\"documents\".\"uploaded_at\", -1, 1) = 'Z'\n            and substr(\"documents\".\"uploaded_at\", 21, length(\"documents\".\"uploaded_at\") - 21) not glob '*[^0-9]*'\n          )\n        )\n      "
+        }
+      }
+    },
+    "findings": {
+      "name": "findings",
+      "columns": {
+        "review_id": {
+          "name": "review_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "position": {
+          "name": "position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "clause": {
+          "name": "clause",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "severity": {
+          "name": "severity",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "excerpt": {
+          "name": "excerpt",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "explanation": {
+          "name": "explanation",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "emitted_at": {
+          "name": "emitted_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "findings_review_id_reviews_id_fk": {
+          "name": "findings_review_id_reviews_id_fk",
+          "tableFrom": "findings",
+          "tableTo": "reviews",
+          "columnsFrom": [
+            "review_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "findings_review_id_position_pk": {
+          "columns": [
+            "review_id",
+            "position"
+          ],
+          "name": "findings_review_id_position_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "findings_position_non_negative_integer": {
+          "name": "findings_position_non_negative_integer",
+          "value": "typeof(\"findings\".\"position\") = 'integer' and \"findings\".\"position\" >= 0"
+        },
+        "findings_severity_enum": {
+          "name": "findings_severity_enum",
+          "value": "\"findings\".\"severity\" in ('low', 'medium', 'high')"
+        },
+        "findings_emitted_at_iso_8601_utc": {
+          "name": "findings_emitted_at_iso_8601_utc",
+          "value": "\n    substr(\"findings\".\"emitted_at\", 1, 19) glob '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T[0-9][0-9]:[0-9][0-9]:[0-9][0-9]'\n    and unixepoch(\"findings\".\"emitted_at\") is not null\n    and strftime('%Y-%m-%dT%H:%M:%S', unixepoch(\"findings\".\"emitted_at\"), 'unixepoch') = substr(\"findings\".\"emitted_at\", 1, 19)\n    and (\n      (length(\"findings\".\"emitted_at\") = 20 and substr(\"findings\".\"emitted_at\", 20, 1) = 'Z')\n      or (\n        length(\"findings\".\"emitted_at\") > 21\n        and substr(\"findings\".\"emitted_at\", 20, 1) = '.'\n        and substr(\"findings\".\"emitted_at\", -1, 1) = 'Z'\n        and substr(\"findings\".\"emitted_at\", 21, length(\"findings\".\"emitted_at\") - 21) not glob '*[^0-9]*'\n      )\n    )\n  "
+        }
+      }
+    },
+    "lawyers": {
+      "name": "lawyers",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "lawyers_name_non_empty": {
+          "name": "lawyers_name_non_empty",
+          "value": "length(trim(\"lawyers\".\"name\")) > 0"
+        },
+        "lawyers_title_non_empty": {
+          "name": "lawyers_title_non_empty",
+          "value": "length(trim(\"lawyers\".\"title\")) > 0"
+        }
+      }
+    },
+    "reviews": {
+      "name": "reviews",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "document_id": {
+          "name": "document_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "requested_by_lawyer_id": {
+          "name": "requested_by_lawyer_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "request_id": {
+          "name": "request_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "allowance_month": {
+          "name": "allowance_month",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "requested_at": {
+          "name": "requested_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "deadline_at": {
+          "name": "deadline_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "completed_at": {
+          "name": "completed_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "failed_at": {
+          "name": "failed_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "failure_reason": {
+          "name": "failure_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "reviews_request_id_unique": {
+          "name": "reviews_request_id_unique",
+          "columns": [
+            "request_id"
+          ],
+          "isUnique": true
+        },
+        "reviews_one_running_per_document": {
+          "name": "reviews_one_running_per_document",
+          "columns": [
+            "document_id"
+          ],
+          "isUnique": true,
+          "where": "\"reviews\".\"status\" = 'running'"
+        },
+        "reviews_allowance_month_status": {
+          "name": "reviews_allowance_month_status",
+          "columns": [
+            "allowance_month",
+            "status"
+          ],
+          "isUnique": false
+        },
+        "reviews_document_requested_at": {
+          "name": "reviews_document_requested_at",
+          "columns": [
+            "document_id",
+            "requested_at",
+            "id"
+          ],
+          "isUnique": false
+        },
+        "reviews_document_completed_at": {
+          "name": "reviews_document_completed_at",
+          "columns": [
+            "document_id",
+            "completed_at",
+            "id"
+          ],
+          "isUnique": false,
+          "where": "\"reviews\".\"status\" = 'completed'"
+        }
+      },
+      "foreignKeys": {
+        "reviews_document_id_documents_id_fk": {
+          "name": "reviews_document_id_documents_id_fk",
+          "tableFrom": "reviews",
+          "tableTo": "documents",
+          "columnsFrom": [
+            "document_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "reviews_requested_by_lawyer_id_lawyers_id_fk": {
+          "name": "reviews_requested_by_lawyer_id_lawyers_id_fk",
+          "tableFrom": "reviews",
+          "tableTo": "lawyers",
+          "columnsFrom": [
+            "requested_by_lawyer_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "reviews_status_enum": {
+          "name": "reviews_status_enum",
+          "value": "\"reviews\".\"status\" in ('running', 'completed', 'failed')"
+        },
+        "reviews_failure_reason_enum": {
+          "name": "reviews_failure_reason_enum",
+          "value": "\"reviews\".\"failure_reason\" is null or \"reviews\".\"failure_reason\" in ('ai_error', 'timed_out', 'interrupted')"
+        },
+        "reviews_allowance_month_format": {
+          "name": "reviews_allowance_month_format",
+          "value": "\"reviews\".\"allowance_month\" glob '[0-9][0-9][0-9][0-9]-[0-9][0-9]'\n        and cast(substr(\"reviews\".\"allowance_month\", 6, 2) as integer) between 1 and 12"
+        },
+        "reviews_requested_at_iso_8601_utc": {
+          "name": "reviews_requested_at_iso_8601_utc",
+          "value": "\n    substr(\"reviews\".\"requested_at\", 1, 19) glob '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T[0-9][0-9]:[0-9][0-9]:[0-9][0-9]'\n    and unixepoch(\"reviews\".\"requested_at\") is not null\n    and strftime('%Y-%m-%dT%H:%M:%S', unixepoch(\"reviews\".\"requested_at\"), 'unixepoch') = substr(\"reviews\".\"requested_at\", 1, 19)\n    and (\n      (length(\"reviews\".\"requested_at\") = 20 and substr(\"reviews\".\"requested_at\", 20, 1) = 'Z')\n      or (\n        length(\"reviews\".\"requested_at\") > 21\n        and substr(\"reviews\".\"requested_at\", 20, 1) = '.'\n        and substr(\"reviews\".\"requested_at\", -1, 1) = 'Z'\n        and substr(\"reviews\".\"requested_at\", 21, length(\"reviews\".\"requested_at\") - 21) not glob '*[^0-9]*'\n      )\n    )\n  "
+        },
+        "reviews_deadline_at_iso_8601_utc": {
+          "name": "reviews_deadline_at_iso_8601_utc",
+          "value": "\n    substr(\"reviews\".\"deadline_at\", 1, 19) glob '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T[0-9][0-9]:[0-9][0-9]:[0-9][0-9]'\n    and unixepoch(\"reviews\".\"deadline_at\") is not null\n    and strftime('%Y-%m-%dT%H:%M:%S', unixepoch(\"reviews\".\"deadline_at\"), 'unixepoch') = substr(\"reviews\".\"deadline_at\", 1, 19)\n    and (\n      (length(\"reviews\".\"deadline_at\") = 20 and substr(\"reviews\".\"deadline_at\", 20, 1) = 'Z')\n      or (\n        length(\"reviews\".\"deadline_at\") > 21\n        and substr(\"reviews\".\"deadline_at\", 20, 1) = '.'\n        and substr(\"reviews\".\"deadline_at\", -1, 1) = 'Z'\n        and substr(\"reviews\".\"deadline_at\", 21, length(\"reviews\".\"deadline_at\") - 21) not glob '*[^0-9]*'\n      )\n    )\n  "
+        },
+        "reviews_completed_at_iso_8601_utc": {
+          "name": "reviews_completed_at_iso_8601_utc",
+          "value": "\"reviews\".\"completed_at\" is null or (\n    substr(\"reviews\".\"completed_at\", 1, 19) glob '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T[0-9][0-9]:[0-9][0-9]:[0-9][0-9]'\n    and unixepoch(\"reviews\".\"completed_at\") is not null\n    and strftime('%Y-%m-%dT%H:%M:%S', unixepoch(\"reviews\".\"completed_at\"), 'unixepoch') = substr(\"reviews\".\"completed_at\", 1, 19)\n    and (\n      (length(\"reviews\".\"completed_at\") = 20 and substr(\"reviews\".\"completed_at\", 20, 1) = 'Z')\n      or (\n        length(\"reviews\".\"completed_at\") > 21\n        and substr(\"reviews\".\"completed_at\", 20, 1) = '.'\n        and substr(\"reviews\".\"completed_at\", -1, 1) = 'Z'\n        and substr(\"reviews\".\"completed_at\", 21, length(\"reviews\".\"completed_at\") - 21) not glob '*[^0-9]*'\n      )\n    )\n  )"
+        },
+        "reviews_failed_at_iso_8601_utc": {
+          "name": "reviews_failed_at_iso_8601_utc",
+          "value": "\"reviews\".\"failed_at\" is null or (\n    substr(\"reviews\".\"failed_at\", 1, 19) glob '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T[0-9][0-9]:[0-9][0-9]:[0-9][0-9]'\n    and unixepoch(\"reviews\".\"failed_at\") is not null\n    and strftime('%Y-%m-%dT%H:%M:%S', unixepoch(\"reviews\".\"failed_at\"), 'unixepoch') = substr(\"reviews\".\"failed_at\", 1, 19)\n    and (\n      (length(\"reviews\".\"failed_at\") = 20 and substr(\"reviews\".\"failed_at\", 20, 1) = 'Z')\n      or (\n        length(\"reviews\".\"failed_at\") > 21\n        and substr(\"reviews\".\"failed_at\", 20, 1) = '.'\n        and substr(\"reviews\".\"failed_at\", -1, 1) = 'Z'\n        and substr(\"reviews\".\"failed_at\", 21, length(\"reviews\".\"failed_at\") - 21) not glob '*[^0-9]*'\n      )\n    )\n  )"
+        },
+        "reviews_running_has_no_terminal_fields": {
+          "name": "reviews_running_has_no_terminal_fields",
+          "value": "\"reviews\".\"status\" != 'running'\n        or (\"reviews\".\"completed_at\" is null and \"reviews\".\"failed_at\" is null and \"reviews\".\"failure_reason\" is null)"
+        },
+        "reviews_completed_has_completion_only": {
+          "name": "reviews_completed_has_completion_only",
+          "value": "\"reviews\".\"status\" != 'completed'\n        or (\"reviews\".\"completed_at\" is not null and \"reviews\".\"failed_at\" is null and \"reviews\".\"failure_reason\" is null)"
+        },
+        "reviews_failed_has_failure_only": {
+          "name": "reviews_failed_has_failure_only",
+          "value": "\"reviews\".\"status\" != 'failed'\n        or (\"reviews\".\"failed_at\" is not null and \"reviews\".\"failure_reason\" is not null and \"reviews\".\"completed_at\" is null)"
+        }
+      }
+    }
+  },
+  "views": {},
+  "enums": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
+    "indexes": {}
+  }
+}

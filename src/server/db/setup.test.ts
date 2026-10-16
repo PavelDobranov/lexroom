@@ -1,4 +1,11 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import {
+  copyFileSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -37,7 +44,18 @@ describe("database setup", () => {
         .all()
         .map(({ name }) => name);
 
-      expect(domainTables).toEqual(["documents", "lawyers"]);
+      expect(domainTables).toEqual([
+        "documents",
+        "findings",
+        "lawyers",
+        "reviews",
+      ]);
+      expect(
+        sqlite.prepare("select count(*) as count from reviews").get(),
+      ).toEqual({ count: 0 });
+      expect(
+        sqlite.prepare("select count(*) as count from findings").get(),
+      ).toEqual({ count: 0 });
       expect(
         sqlite.prepare("select count(*) as count from lawyers").get(),
       ).toEqual({ count: lawyerFixtures.length });
@@ -80,6 +98,88 @@ describe("database setup", () => {
           }))
           .sort((left, right) => left.id.localeCompare(right.id)),
       );
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("additively upgrades an M1 database without changing public data or preloading findings", () => {
+    // Build a migrations folder holding only the M1 (0000) migration.
+    const realDrizzle = path.resolve(process.cwd(), "drizzle");
+    const m1Folder = path.join(temporaryDirectory, "m1-drizzle");
+    mkdirSync(path.join(m1Folder, "meta"), { recursive: true });
+    copyFileSync(
+      path.join(realDrizzle, "0000_puzzling_morlocks.sql"),
+      path.join(m1Folder, "0000_puzzling_morlocks.sql"),
+    );
+    copyFileSync(
+      path.join(realDrizzle, "meta", "0000_snapshot.json"),
+      path.join(m1Folder, "meta", "0000_snapshot.json"),
+    );
+    const journal = JSON.parse(
+      readFileSync(path.join(realDrizzle, "meta", "_journal.json"), "utf8"),
+    ) as { entries: Array<{ idx: number }> };
+    journal.entries = journal.entries.filter((entry) => entry.idx === 0);
+    writeFileSync(
+      path.join(m1Folder, "meta", "_journal.json"),
+      JSON.stringify(journal),
+    );
+
+    // Establish the M1 database and record its public state.
+    setupDatabase(databasePath, m1Folder);
+    let m1Documents: unknown;
+    let m1Lawyers: unknown;
+    {
+      const sqlite = openDatabase(databasePath);
+      try {
+        expect(
+          sqlite
+            .prepare<[], { name: string }>(`
+              select name from sqlite_schema
+              where type = 'table' and name not like 'sqlite_%'
+                and name != '__drizzle_migrations'
+              order by name
+            `)
+            .all()
+            .map(({ name }) => name),
+        ).toEqual(["documents", "lawyers"]);
+        m1Documents = sqlite.prepare("select * from documents order by id").all();
+        m1Lawyers = sqlite.prepare("select * from lawyers order by id").all();
+      } finally {
+        sqlite.close();
+      }
+    }
+
+    // Upgrade with the full (0000 + 0001) migration set.
+    setupDatabase(databasePath);
+
+    const sqlite = openDatabase(databasePath);
+    try {
+      expect(
+        sqlite
+          .prepare<[], { name: string }>(`
+            select name from sqlite_schema
+            where type = 'table' and name not like 'sqlite_%'
+              and name != '__drizzle_migrations'
+            order by name
+          `)
+          .all()
+          .map(({ name }) => name),
+      ).toEqual(["documents", "findings", "lawyers", "reviews"]);
+
+      // Public data is untouched and no findings were preloaded.
+      expect(sqlite.prepare("select * from documents order by id").all()).toEqual(
+        m1Documents,
+      );
+      expect(sqlite.prepare("select * from lawyers order by id").all()).toEqual(
+        m1Lawyers,
+      );
+      expect(
+        sqlite.prepare("select count(*) as count from reviews").get(),
+      ).toEqual({ count: 0 });
+      expect(
+        sqlite.prepare("select count(*) as count from findings").get(),
+      ).toEqual({ count: 0 });
     } finally {
       sqlite.close();
     }
