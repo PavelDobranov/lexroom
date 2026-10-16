@@ -1,7 +1,7 @@
 import { QueryClient, type Query } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { ReviewSnapshot } from "../shared/api";
+import type { ReviewSnapshot, WorkspaceSnapshot } from "../shared/api";
 import {
   createReviewRequestCoordinator,
   fetchReview,
@@ -122,6 +122,7 @@ describe("review request coordination", () => {
   const intent = {
     documentId: "doc-1",
     requestedByLawyerId: "lawyer-1",
+    baselineLatestReviewId: null,
   };
 
   it("reuses a sent request ID after network and 5xx ambiguity", async () => {
@@ -149,6 +150,89 @@ describe("review request coordination", () => {
 
     expect(sentIds).toEqual(["request-1", "request-1", "request-1"]);
     expect(coordinator.unresolvedRequestId(intent)).toBeNull();
+  });
+
+  it("uses a new ID once workspace polling reveals the committed outcome", async () => {
+    const sentIds: string[] = [];
+    const ids = ["request-1", "request-2"];
+    let attempt = 0;
+    const coordinator = createReviewRequestCoordinator({
+      createRequestId: () => ids.shift()!,
+      send: vi.fn(async ({ requestId }) => {
+        sentIds.push(requestId);
+        attempt += 1;
+        if (attempt === 1) {
+          throw new ReviewRequestError("Lost response", "INTERNAL_ERROR", 500);
+        }
+        return runningSnapshot;
+      }),
+    });
+    const retryIntent = { ...intent, baselineLatestReviewId: "old-review" };
+
+    await expect(coordinator.submit(retryIntent)).rejects.toMatchObject({
+      status: 500,
+    });
+    coordinator.resolveFromWorkspace({
+      lawyers: [],
+      monthlyAllowance: {
+        month: "2026-10",
+        limit: 10,
+        completed: 1,
+        reserved: 0,
+        available: 9,
+      },
+      documents: [
+        {
+          id: "doc-1",
+          title: "Document",
+          type: "other",
+          pages: 1,
+          uploadedAt: "2026-10-01T00:00:00.000Z",
+          uploadedByLawyerId: "lawyer-1",
+          supersedesDocumentId: null,
+          latestReviewAttempt: {
+            id: "committed-review",
+            documentId: "doc-1",
+            requestedByLawyerId: "lawyer-1",
+            requestedAt: "2026-10-16T12:00:00.000Z",
+            allowanceMonth: "2026-10",
+            status: "failed",
+            failedAt: "2026-10-16T12:00:10.000Z",
+            failureReason: "ai_error",
+          },
+          latestSuccessfulReview: null,
+        },
+      ],
+    } satisfies WorkspaceSnapshot);
+
+    expect(coordinator.unresolvedRequestId(retryIntent)).toBeNull();
+    await expect(coordinator.submit(retryIntent)).resolves.toEqual(runningSnapshot);
+    expect(sentIds).toEqual(["request-1", "request-2"]);
+  });
+
+  it("does not resolve ambiguity when polling still shows the baseline", async () => {
+    const coordinator = createReviewRequestCoordinator({
+      createRequestId: () => "request-1",
+      send: vi.fn(async () => {
+        throw new TypeError("network failed");
+      }),
+    });
+    const retryIntent = { ...intent, baselineLatestReviewId: "old-review" };
+    await expect(coordinator.submit(retryIntent)).rejects.toThrow("network failed");
+
+    coordinator.resolveFromWorkspace({
+      lawyers: [],
+      documents: [],
+      monthlyAllowance: {
+        month: "2026-10",
+        limit: 10,
+        completed: 0,
+        reserved: 0,
+        available: 10,
+      },
+    });
+
+    expect(coordinator.unresolvedRequestId(retryIntent)).toBe("request-1");
   });
 
   it("uses a new ID after a known outcome or a completed submission", async () => {

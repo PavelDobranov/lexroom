@@ -33,6 +33,7 @@ export function ReviewConfirmationDialog({
       submitReviewRequest({
         documentId: document.id,
         requestedByLawyerId: lawyer.id,
+        baselineLatestReviewId: document.latestReviewAttempt?.id ?? null,
       }),
     onSuccess: (review) => {
       void queryClient.invalidateQueries({ queryKey: WORKSPACE_QUERY_KEY });

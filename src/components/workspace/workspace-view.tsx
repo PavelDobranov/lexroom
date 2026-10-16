@@ -10,6 +10,7 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 import type { WorkspaceSnapshot } from "../../shared/api";
 import { reviewIdsToOpen } from "../../lib/review-presentation";
+import { resolveReviewRequestsFromWorkspace } from "../../lib/review-query";
 import {
   readSelectedLawyerId,
   resolveSelectedLawyerId,
@@ -28,6 +29,10 @@ import { InitialError, NoLawyers, WorkspaceLoading } from "./status-screens";
 function WorkspaceContent() {
   const query = useQuery(WORKSPACE_QUERY_OPTIONS);
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (query.data) resolveReviewRequestsFromWorkspace(query.data);
+  }, [query.data, query.dataUpdatedAt]);
 
   useEffect(() => {
     const refetchOnFocus = () => {

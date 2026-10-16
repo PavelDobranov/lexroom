@@ -1,6 +1,10 @@
 import type { Query } from "@tanstack/react-query";
 
-import type { ApiError, ReviewSnapshot } from "../shared/api";
+import type {
+  ApiError,
+  ReviewSnapshot,
+  WorkspaceSnapshot,
+} from "../shared/api";
 
 export const REVIEW_POLL_INTERVAL_MS = 1_000;
 
@@ -77,7 +81,9 @@ export async function requestReview(
   return (await response.json()) as ReviewSnapshot;
 }
 
-type ReviewIntent = Omit<RequestReviewInput, "requestId">;
+type ReviewIntent = Omit<RequestReviewInput, "requestId"> & {
+  baselineLatestReviewId: string | null;
+};
 
 type ReviewRequestCoordinatorOptions = {
   createRequestId?: () => string;
@@ -94,34 +100,59 @@ export function createReviewRequestCoordinator(
 ) {
   const createRequestId = options.createRequestId ?? (() => crypto.randomUUID());
   const send = options.send ?? requestReview;
-  const unresolvedByIntent = new Map<string, string>();
+  const unresolvedByIntent = new Map<
+    string,
+    { requestId: string; baselineLatestReviewId: string | null; documentId: string }
+  >();
   const keyFor = (input: ReviewIntent) =>
     `${input.documentId}\u0000${input.requestedByLawyerId}`;
 
   return {
     async submit(input: ReviewIntent): Promise<ReviewSnapshot> {
       const key = keyFor(input);
-      const requestId = unresolvedByIntent.get(key) ?? createRequestId();
-      unresolvedByIntent.set(key, requestId);
+      const existing = unresolvedByIntent.get(key);
+      const requestId = existing?.requestId ?? createRequestId();
+      unresolvedByIntent.set(key, existing ?? {
+        requestId,
+        baselineLatestReviewId: input.baselineLatestReviewId,
+        documentId: input.documentId,
+      });
 
       try {
-        const review = await send({ ...input, requestId });
-        if (unresolvedByIntent.get(key) === requestId) {
+        const review = await send({
+          documentId: input.documentId,
+          requestedByLawyerId: input.requestedByLawyerId,
+          requestId,
+        });
+        if (unresolvedByIntent.get(key)?.requestId === requestId) {
           unresolvedByIntent.delete(key);
         }
         return review;
       } catch (error) {
         const status = error instanceof ReviewRequestError ? error.status : null;
         if (status !== null && status < 500) {
-          if (unresolvedByIntent.get(key) === requestId) {
+          if (unresolvedByIntent.get(key)?.requestId === requestId) {
             unresolvedByIntent.delete(key);
           }
         }
         throw error;
       }
     },
+    resolveFromWorkspace(snapshot: WorkspaceSnapshot): void {
+      for (const [key, unresolved] of unresolvedByIntent) {
+        const document = snapshot.documents.find(
+          (candidate) => candidate.id === unresolved.documentId,
+        );
+        if (
+          document &&
+          document.latestReviewAttempt?.id !== unresolved.baselineLatestReviewId
+        ) {
+          unresolvedByIntent.delete(key);
+        }
+      }
+    },
     unresolvedRequestId(input: ReviewIntent): string | null {
-      return unresolvedByIntent.get(keyFor(input)) ?? null;
+      return unresolvedByIntent.get(keyFor(input))?.requestId ?? null;
     },
   };
 }
@@ -130,6 +161,12 @@ const reviewRequestCoordinator = createReviewRequestCoordinator();
 
 export function submitReviewRequest(input: ReviewIntent): Promise<ReviewSnapshot> {
   return reviewRequestCoordinator.submit(input);
+}
+
+export function resolveReviewRequestsFromWorkspace(
+  snapshot: WorkspaceSnapshot,
+): void {
+  reviewRequestCoordinator.resolveFromWorkspace(snapshot);
 }
 
 /**
