@@ -1,9 +1,11 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
 
 import type { WorkspaceSnapshot } from "../../shared/api";
 import { describeAllowanceAvailability } from "../../lib/review-presentation";
-import { requestReview, ReviewRequestError } from "../../lib/review-query";
+import {
+  ReviewRequestError,
+  submitReviewRequest,
+} from "../../lib/review-query";
 import { WORKSPACE_QUERY_KEY } from "../../lib/workspace-query";
 import { ModalShell } from "./modal-shell";
 
@@ -24,16 +26,14 @@ export function ReviewConfirmationDialog({
   onCreated: (reviewId: string) => void;
 }) {
   const queryClient = useQueryClient();
-  // One request ID per intentional confirmation.
-  const [requestId] = useState(() => crypto.randomUUID());
   const availability = describeAllowanceAvailability(allowance);
 
   const mutation = useMutation({
     mutationFn: () =>
-      requestReview({
+      submitReviewRequest({
         documentId: document.id,
         requestedByLawyerId: lawyer.id,
-        requestId,
+        baselineLatestReviewId: document.latestReviewAttempt?.id ?? null,
       }),
     onSuccess: (review) => {
       void queryClient.invalidateQueries({ queryKey: WORKSPACE_QUERY_KEY });

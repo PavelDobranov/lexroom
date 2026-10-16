@@ -8,6 +8,7 @@ import {
   type ReviewRunner,
   type Scheduler,
 } from "./review-runner";
+import { ReviewService } from "./review-service";
 
 // Best-effort, process-local timers for reviews this process accepted. Timer
 // precision is not a correctness mechanism: late callbacks are rejected safely
@@ -20,6 +21,38 @@ const realScheduler: Scheduler = {
 };
 
 let runner: ReviewRunner | undefined;
+
+/**
+ * Creates a process-local, retryable initialization guard. Concurrent callers
+ * share one reconciliation. Once it succeeds, later calls are harmless; a
+ * failed attempt is cleared so temporary database unavailability can recover.
+ */
+export function createReviewRuntimeInitializer(
+  reconcile: () => void | Promise<void>,
+): () => Promise<void> {
+  let initialization: Promise<void> | undefined;
+
+  return () => {
+    if (initialization) return initialization;
+
+    const attempt = Promise.resolve().then(reconcile);
+    const guardedAttempt = attempt.catch((error) => {
+      if (initialization === guardedAttempt) initialization = undefined;
+      throw error;
+    });
+    initialization = guardedAttempt;
+    return guardedAttempt;
+  };
+}
+
+export const initializeReviewRuntime = createReviewRuntimeInitializer(() => {
+  const sqlite = openDatabase(resolveDatabasePath());
+  try {
+    new ReviewService(sqlite, () => new Date()).interruptRunningReviews();
+  } finally {
+    sqlite.close();
+  }
+});
 
 function configuredPlan() {
   const forced = process.env.NODE_ENV === "production"

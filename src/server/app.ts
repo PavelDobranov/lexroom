@@ -9,13 +9,17 @@ import type {
 } from "../shared/api";
 import { openDatabase, resolveDatabasePath } from "./db/database";
 import { ReviewService } from "./reviews/review-service";
-import { launchReview as defaultLaunchReview } from "./reviews/runtime";
+import {
+  initializeReviewRuntime as defaultInitializeReviewRuntime,
+  launchReview as defaultLaunchReview,
+} from "./reviews/runtime";
 import { readWorkspaceSnapshot } from "./workspace/read-workspace";
 
 type ApiDependencies = {
   openWorkspaceDatabase: () => Database.Database;
   now: () => Date;
   logger: Pick<Console, "error">;
+  initializeRuntime: () => Promise<void>;
   launchReview: (input: {
     reviewId: string;
     documentId: string;
@@ -27,6 +31,7 @@ const defaultDependencies: ApiDependencies = {
   openWorkspaceDatabase: () => openDatabase(resolveDatabasePath()),
   now: () => new Date(),
   logger: console,
+  initializeRuntime: defaultInitializeReviewRuntime,
   launchReview: defaultLaunchReview,
 };
 
@@ -108,6 +113,7 @@ function respondServiceError(
   error: unknown,
   logMessage: string,
 ) {
+  logger.error(logMessage, error);
   if (isTemporaryDatabaseError(error)) {
     return c.json(
       errorBody(
@@ -117,7 +123,6 @@ function respondServiceError(
       503,
     );
   }
-  logger.error(logMessage, error);
   return c.json(
     errorBody("INTERNAL_ERROR", "Something went wrong. Please try again."),
     500,
@@ -169,26 +174,29 @@ export function createApi(
     return c.json({ status: "ok" });
   });
 
-  app.get("/workspace", (c) => {
+  app.get("/workspace", async (c) => {
     c.header("Cache-Control", "no-store");
 
     try {
+      await dependencies.initializeRuntime();
       return withDatabase(dependencies.openWorkspaceDatabase, (sqlite) =>
         c.json(readWorkspaceSnapshot(sqlite, dependencies.now())),
       );
     } catch (error) {
-      dependencies.logger.error("Failed to read the workspace snapshot", error);
-      return c.json(
-        errorBody("WORKSPACE_UNAVAILABLE", "Workspace data is unavailable."),
-        500,
+      return respondServiceError(
+        c,
+        dependencies.logger,
+        error,
+        "Failed to read the workspace snapshot",
       );
     }
   });
 
-  app.get("/reviews/:reviewId", (c) => {
+  app.get("/reviews/:reviewId", async (c) => {
     c.header("Cache-Control", "no-store");
 
     try {
+      await dependencies.initializeRuntime();
       const snapshot = withDatabase(
         dependencies.openWorkspaceDatabase,
         (sqlite) =>
@@ -245,6 +253,7 @@ export function createApi(
 
     let result;
     try {
+      await dependencies.initializeRuntime();
       result = withDatabase(dependencies.openWorkspaceDatabase, (sqlite) =>
         new ReviewService(sqlite, dependencies.now).admit({
           documentId,

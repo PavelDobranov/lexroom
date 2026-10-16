@@ -77,6 +77,88 @@ export async function requestReview(
   return (await response.json()) as ReviewSnapshot;
 }
 
+type ReviewIntent = Omit<RequestReviewInput, "requestId"> & {
+  baselineLatestReviewId: string | null;
+};
+
+type ReviewRequestCoordinatorOptions = {
+  createRequestId?: () => string;
+  send?: (input: RequestReviewInput) => Promise<ReviewSnapshot>;
+};
+
+/**
+ * Keeps the idempotency key for an ambiguously answered submission outside the
+ * confirmation dialog lifecycle. Success and definitive 4xx outcomes clear the
+ * key; network and 5xx failures retain it for a safe replay.
+ */
+export function createReviewRequestCoordinator(
+  options: ReviewRequestCoordinatorOptions = {},
+) {
+  const createRequestId = options.createRequestId ?? (() => crypto.randomUUID());
+  const send = options.send ?? requestReview;
+  const unresolvedByIntent = new Map<
+    string,
+    { requestId: string; baselineLatestReviewId: string | null }
+  >();
+  const keyFor = (input: ReviewIntent) =>
+    `${input.documentId}\u0000${input.requestedByLawyerId}`;
+
+  async function submit(input: ReviewIntent): Promise<ReviewSnapshot> {
+    const key = keyFor(input);
+    const existing = unresolvedByIntent.get(key);
+    const requestId = existing?.requestId ?? createRequestId();
+    unresolvedByIntent.set(key, existing ?? {
+      requestId,
+      baselineLatestReviewId: input.baselineLatestReviewId,
+    });
+
+    try {
+      const review = await send({
+        documentId: input.documentId,
+        requestedByLawyerId: input.requestedByLawyerId,
+        requestId,
+      });
+      if (unresolvedByIntent.get(key)?.requestId === requestId) {
+        unresolvedByIntent.delete(key);
+      }
+
+      // A changed latest Review means this click is a later intentional retry,
+      // but it does not prove which request produced that Review. First replay
+      // the retained ID to establish its outcome. Only after a terminal replay
+      // is known do we submit the intentional retry with a fresh ID.
+      if (
+        existing &&
+        input.baselineLatestReviewId !== existing.baselineLatestReviewId &&
+        review.status !== "running"
+      ) {
+        return submit(input);
+      }
+      return review;
+    } catch (error) {
+      const status = error instanceof ReviewRequestError ? error.status : null;
+      if (status !== null && status < 500) {
+        if (unresolvedByIntent.get(key)?.requestId === requestId) {
+          unresolvedByIntent.delete(key);
+        }
+      }
+      throw error;
+    }
+  }
+
+  return {
+    submit,
+    unresolvedRequestId(input: ReviewIntent): string | null {
+      return unresolvedByIntent.get(keyFor(input))?.requestId ?? null;
+    },
+  };
+}
+
+const reviewRequestCoordinator = createReviewRequestCoordinator();
+
+export function submitReviewRequest(input: ReviewIntent): Promise<ReviewSnapshot> {
+  return reviewRequestCoordinator.submit(input);
+}
+
 /**
  * Query options for one review. An actively viewed running review polls every
  * second and stops at a terminal status; interval polling pauses in background
