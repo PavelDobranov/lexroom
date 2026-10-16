@@ -1,4 +1,4 @@
-import type { WorkspaceSnapshot } from "../shared/api";
+import type { WorkspaceSnapshot } from "../../shared/api";
 
 type Lawyer = WorkspaceSnapshot["lawyers"][number];
 

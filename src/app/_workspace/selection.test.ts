@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import type { WorkspaceSnapshot } from "../shared/api";
-import { resolveSelectedLawyerId } from "./selected-lawyer";
+import type { WorkspaceSnapshot } from "../../shared/api";
+import { resolveSelectedLawyerId } from "./selection";
 
 type Lawyer = WorkspaceSnapshot["lawyers"][number];
 

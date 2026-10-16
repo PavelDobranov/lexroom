@@ -1,12 +1,9 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import type { WorkspaceSnapshot } from "../../shared/api";
-import { describeAllowanceAvailability } from "../../lib/review-presentation";
-import {
-  ReviewRequestError,
-  submitReviewRequest,
-} from "../../lib/review-query";
-import { WORKSPACE_QUERY_KEY } from "../../lib/workspace-query";
+import type { WorkspaceSnapshot } from "../../../shared/api";
+import { WORKSPACE_QUERY_KEY } from "../../_workspace/query";
+import { describeAllowanceAvailability } from "../presentation";
+import { ReviewRequestError, submitReviewRequest } from "../query";
 import { ModalShell } from "./modal-shell";
 
 type Lawyer = WorkspaceSnapshot["lawyers"][number];

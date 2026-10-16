@@ -2,8 +2,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import type { ReviewSnapshot } from "../../shared/api";
-import { reviewQueryKey } from "../../lib/review-query";
+import type { ReviewSnapshot } from "../../../shared/api";
+import { reviewQueryKey } from "../query";
 import { ReviewResultPanel } from "./review-result-panel";
 
 const base = {

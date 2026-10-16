@@ -1,4 +1,4 @@
-import type { ApiError, WorkspaceSnapshot } from "../shared/api";
+import type { ApiError, WorkspaceSnapshot } from "../../shared/api";
 
 export const WORKSPACE_QUERY_KEY = ["workspace"] as const;
 export const WORKSPACE_POLL_INTERVAL_MS = 5_000;

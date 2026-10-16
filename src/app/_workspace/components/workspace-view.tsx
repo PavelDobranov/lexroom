@@ -8,21 +8,19 @@ import {
 } from "@tanstack/react-query";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
-import type { WorkspaceSnapshot } from "../../shared/api";
-import { reviewIdsToOpen } from "../../lib/review-presentation";
+import type { WorkspaceSnapshot } from "../../../shared/api";
+import { ReviewConfirmationDialog } from "../../_review/components/review-confirmation-dialog";
+import { ReviewResultPanel } from "../../_review/components/review-result-panel";
+import { reviewIdsToOpen } from "../../_review/presentation";
 import {
   readSelectedLawyerId,
   resolveSelectedLawyerId,
   subscribeToSelectedLawyer,
   writeSelectedLawyerId,
-} from "../../lib/selected-lawyer";
-import {
-  WORKSPACE_QUERY_KEY,
-  WORKSPACE_QUERY_OPTIONS,
-} from "../../lib/workspace-query";
+} from "../selection";
+import { WORKSPACE_QUERY_KEY, WORKSPACE_QUERY_OPTIONS } from "../query";
 import { DocumentCard } from "./document-card";
-import { ReviewConfirmationDialog } from "./review-confirmation-dialog";
-import { ReviewResultPanel } from "./review-result-panel";
+import { LawyerPicker } from "./lawyer-picker";
 import { InitialError, NoLawyers, WorkspaceLoading } from "./status-screens";
 
 function WorkspaceContent() {
@@ -114,23 +112,11 @@ function WorkspaceReady({
             Browse the firm&apos;s shared documents and review availability.
           </p>
         </div>
-        <div className="w-full max-w-sm">
-          <label htmlFor="lawyer-selector" className="mb-2 block text-sm font-semibold text-slate-800">
-            Working as
-          </label>
-          <select
-            id="lawyer-selector"
-            value={activeLawyerId}
-            onChange={(event) => writeSelectedLawyerId(event.target.value)}
-            className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-medium text-slate-900 shadow-sm outline-none transition focus:border-indigo-600 focus:ring-3 focus:ring-indigo-100"
-          >
-            {lawyers.map((lawyer) => (
-              <option key={lawyer.id} value={lawyer.id}>
-                {lawyer.name} — {lawyer.title}
-              </option>
-            ))}
-          </select>
-        </div>
+        <LawyerPicker
+          lawyers={lawyers}
+          selectedLawyerId={activeLawyerId}
+          onChange={writeSelectedLawyerId}
+        />
       </header>
 
       {refreshFailed && (

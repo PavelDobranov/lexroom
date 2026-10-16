@@ -5,51 +5,12 @@ import {
 } from "@tanstack/react-query";
 import { useEffect } from "react";
 
-import type { FindingSnapshot, ReviewSnapshot } from "../../shared/api";
-import {
-  isTerminalStatus,
-  resolveReviewPresentation,
-} from "../../lib/review-presentation";
-import { reviewQueryOptions } from "../../lib/review-query";
-import { WORKSPACE_QUERY_KEY } from "../../lib/workspace-query";
+import type { ReviewSnapshot } from "../../../shared/api";
+import { WORKSPACE_QUERY_KEY } from "../../_workspace/query";
+import { isTerminalStatus, resolveReviewPresentation } from "../presentation";
+import { reviewQueryOptions } from "../query";
+import { FindingsList } from "./findings-list";
 import { ModalShell } from "./modal-shell";
-
-function SeverityTag({ severity }: { severity: "low" | "medium" | "high" }) {
-  const styles = {
-    high: "bg-rose-50 text-rose-700",
-    medium: "bg-amber-50 text-amber-700",
-    low: "bg-slate-100 text-slate-700",
-  } as const;
-  return (
-    <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ${styles[severity]}`}>
-      {severity}
-    </span>
-  );
-}
-
-function FindingsList({ findings }: { findings: FindingSnapshot[] }) {
-  return (
-    <ul className="mt-4 space-y-3">
-      {findings.map((finding) => (
-        <li key={finding.position} className="rounded-xl border border-slate-200 p-4">
-          <div className="flex items-start justify-between gap-3">
-            <h4 className="text-sm font-semibold text-slate-950">
-              {finding.clause ? `${finding.clause} — ` : ""}
-              {finding.title}
-            </h4>
-            <SeverityTag severity={finding.severity} />
-          </div>
-          {finding.excerpt && (
-            <blockquote className="mt-2 border-l-2 border-slate-300 pl-3 text-sm italic text-slate-600">
-              {finding.excerpt}
-            </blockquote>
-          )}
-          <p className="mt-2 text-sm text-slate-700">{finding.explanation}</p>
-        </li>
-      ))}
-    </ul>
-  );
-}
 
 export function ReviewResultPanel({
   latestReviewId,

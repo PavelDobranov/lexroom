@@ -1,6 +1,6 @@
 import type { Query } from "@tanstack/react-query";
 
-import type { ApiError, ReviewSnapshot } from "../shared/api";
+import type { ApiError, ReviewSnapshot } from "../../shared/api";
 
 export const REVIEW_POLL_INTERVAL_MS = 1_000;
 

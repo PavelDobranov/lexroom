@@ -1,6 +1,6 @@
-import type { ReviewSummary, WorkspaceSnapshot } from "../../shared/api";
-import { formatDocumentType, formatUploadDate } from "../../lib/format";
-import { reviewActionLabel } from "../../lib/review-presentation";
+import type { ReviewSummary, WorkspaceSnapshot } from "../../../shared/api";
+import { reviewActionLabel } from "../../_review/presentation";
+import { formatDocumentType, formatUploadDate } from "../presentation";
 
 type Lawyer = WorkspaceSnapshot["lawyers"][number];
 type Document = WorkspaceSnapshot["documents"][number];

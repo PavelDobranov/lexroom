@@ -1,13 +1,13 @@
 import { QueryClient } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { WorkspaceSnapshot } from "../shared/api";
+import type { WorkspaceSnapshot } from "../../shared/api";
 import {
   fetchWorkspace,
   WORKSPACE_POLL_INTERVAL_MS,
   WORKSPACE_QUERY_OPTIONS,
   WorkspaceRequestError,
-} from "./workspace-query";
+} from "./query";
 
 const snapshot: WorkspaceSnapshot = {
   lawyers: [],

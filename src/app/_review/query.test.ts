@@ -1,7 +1,7 @@
 import { QueryClient, type Query } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { ReviewSnapshot } from "../shared/api";
+import type { ReviewSnapshot } from "../../shared/api";
 import {
   createReviewRequestCoordinator,
   fetchReview,
@@ -10,7 +10,7 @@ import {
   REVIEW_POLL_INTERVAL_MS,
   reviewQueryKey,
   reviewQueryOptions,
-} from "./review-query";
+} from "./query";
 
 const runningSnapshot: ReviewSnapshot = {
   id: "review-1",

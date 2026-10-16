@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatDocumentType } from "./format";
+import { formatDocumentType } from "./presentation";
 
 describe("document type presentation", () => {
   it("formats familiar acronyms and open-text types", () => {

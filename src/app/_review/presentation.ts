@@ -5,7 +5,7 @@ import type {
   ReviewSnapshot,
   ReviewSummary,
   WorkspaceSnapshot,
-} from "../shared/api";
+} from "../../shared/api";
 
 export type ReviewActionLabel =
   | "Request review"

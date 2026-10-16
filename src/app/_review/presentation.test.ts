@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { ReviewSnapshot, ReviewSummary } from "../shared/api";
+import type { ReviewSnapshot, ReviewSummary } from "../../shared/api";
 import {
   describeAllowanceAvailability,
   isTerminalStatus,
@@ -8,7 +8,7 @@ import {
   reviewActionLabel,
   reviewIdsToOpen,
   REVIEW_FAILURE_MESSAGES,
-} from "./review-presentation";
+} from "./presentation";
 
 const base = {
   id: "review-1",
