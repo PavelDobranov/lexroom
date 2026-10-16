@@ -1,4 +1,5 @@
 import type {
+  DocumentReviewFields,
   FindingSnapshot,
   ReviewFailureReason,
   ReviewSnapshot,
@@ -10,6 +11,21 @@ export type ReviewActionLabel =
   | "Request review"
   | "Review again"
   | "Review in progress";
+
+/** Selects only the full snapshots needed for an opened Document. */
+export function reviewIdsToOpen(
+  reviews: DocumentReviewFields,
+  preferredLatestReviewId?: string,
+): { latestReviewId: string | null; previousSuccessfulReviewId: string | null } {
+  const latestReviewId =
+    preferredLatestReviewId ?? reviews.latestReviewAttempt?.id ?? null;
+  const successfulReviewId = reviews.latestSuccessfulReview?.id ?? null;
+  return {
+    latestReviewId,
+    previousSuccessfulReviewId:
+      successfulReviewId === latestReviewId ? null : successfulReviewId,
+  };
+}
 
 /** The per-document action label from its latest review attempt (M2-REQ-11). */
 export function reviewActionLabel(

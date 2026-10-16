@@ -1,4 +1,8 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useQuery,
+  useQueryClient,
+  type UseQueryResult,
+} from "@tanstack/react-query";
 import { useEffect } from "react";
 
 import type { FindingSnapshot, ReviewSnapshot } from "../../shared/api";
@@ -48,23 +52,32 @@ function FindingsList({ findings }: { findings: FindingSnapshot[] }) {
 }
 
 export function ReviewResultPanel({
-  reviewId,
+  latestReviewId,
+  latestSuccessfulReviewId,
   onClose,
   onRetry,
 }: {
-  reviewId: string;
+  latestReviewId: string;
+  latestSuccessfulReviewId: string | null;
   onClose: () => void;
   onRetry: (documentId: string) => void;
 }) {
   const queryClient = useQueryClient();
-  const query = useQuery(reviewQueryOptions(reviewId, { enabled: true }));
-  const status = query.data?.status;
+  const latestQuery = useQuery(
+    reviewQueryOptions(latestReviewId, { enabled: true }),
+  );
+  const previousQuery = useQuery(
+    reviewQueryOptions(latestSuccessfulReviewId ?? "", {
+      enabled: latestSuccessfulReviewId !== null,
+    }),
+  );
+  const latestStatus = latestQuery.data?.status;
 
   useEffect(() => {
-    if (status && isTerminalStatus(status)) {
+    if (latestStatus && isTerminalStatus(latestStatus)) {
       void queryClient.invalidateQueries({ queryKey: WORKSPACE_QUERY_KEY });
     }
-  }, [status, queryClient]);
+  }, [latestStatus, queryClient]);
 
   return (
     <ModalShell labelledBy="review-result-title" onClose={onClose}>
@@ -82,9 +95,20 @@ export function ReviewResultPanel({
       </div>
 
       <div className="mt-5 max-h-[60vh] overflow-y-auto">
-        <ReviewResultBody query={query} onRetry={onRetry} />
+        <ReviewResultBody query={latestQuery} onRetry={onRetry} />
+
+        {latestSuccessfulReviewId && (
+          <section className="mt-6 border-t border-slate-200 pt-6" aria-labelledby="previous-review-title">
+            <h3 id="previous-review-title" className="text-sm font-semibold text-slate-950">
+              Previous completed review.
+            </h3>
+            <div className="mt-3">
+              <PreviousCompletedReviewBody query={previousQuery} />
+            </div>
+          </section>
+        )}
       </div>
-      {query.isRefetchError && query.data && (
+      {latestQuery.isRefetchError && latestQuery.data && (
         <p className="mt-4 text-sm text-amber-800" role="status">
           The latest refresh failed. This result may be out of date.
         </p>
@@ -93,12 +117,45 @@ export function ReviewResultPanel({
   );
 }
 
+function PreviousCompletedReviewBody({
+  query,
+}: {
+  query: UseQueryResult<ReviewSnapshot, Error>;
+}) {
+  if (query.data?.status === "completed") {
+    return <ReviewResultBody query={query} />;
+  }
+
+  if (query.isError || (!query.isFetching && query.data)) {
+    return (
+      <div role="alert">
+        <p className="text-sm text-rose-700">
+          The previous completed review could not be loaded.
+        </p>
+        <button
+          type="button"
+          onClick={() => void query.refetch()}
+          className="mt-3 rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white"
+        >
+          Try again
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <p className="text-sm text-slate-600" aria-busy="true">
+      Loading the completed review…
+    </p>
+  );
+}
+
 function ReviewResultBody({
   query,
   onRetry,
 }: {
-  query: ReturnType<typeof useQuery<ReviewSnapshot>>;
-  onRetry: (documentId: string) => void;
+  query: UseQueryResult<ReviewSnapshot, Error>;
+  onRetry?: (documentId: string) => void;
 }) {
   if (query.isPending) {
     return (
@@ -147,7 +204,7 @@ function ReviewResultBody({
     );
   }
   if (presentation.kind === "completed-empty") {
-    return <p className="text-base font-medium text-emerald-700">No issues flagged</p>;
+    return <p className="text-base font-medium text-emerald-700">No issues flagged.</p>;
   }
   if (presentation.kind === "completed") {
     return (
@@ -162,13 +219,15 @@ function ReviewResultBody({
       <p className="text-sm font-medium text-rose-700" role="alert">
         {presentation.message}
       </p>
-      <button
-        type="button"
-        onClick={() => onRetry(query.data!.documentId)}
-        className="mt-4 rounded-lg bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
-      >
-        Retry review
-      </button>
+      {onRetry && (
+        <button
+          type="button"
+          onClick={() => onRetry(query.data!.documentId)}
+          className="mt-4 rounded-lg bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
+        >
+          Review again
+        </button>
+      )}
     </div>
   );
 }
