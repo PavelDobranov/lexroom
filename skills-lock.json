@@ -19,6 +19,12 @@
       "skillPath": "skills/productivity/grilling/SKILL.md",
       "computedHash": "ef1641a2047b71b60f1942cd35efb47d3afc9d584dff5a0b01f8c7db923aaa08"
     },
+    "improve": {
+      "source": "owainlewis/blueprint",
+      "sourceType": "github",
+      "skillPath": "skills/improve/SKILL.md",
+      "computedHash": "b02561446ea36acdf0aa209fe34061bdcaa856cad82d2825886dfb13e67c3f12"
+    },
     "plan": {
       "source": "owainlewis/blueprint",
       "sourceType": "github",
