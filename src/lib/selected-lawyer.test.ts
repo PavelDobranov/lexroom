@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { WorkspaceSnapshot } from "../shared/api";
-import { formatDocumentType, resolveSelectedLawyerId } from "./workspace-view";
+import { resolveSelectedLawyerId } from "./selected-lawyer";
 
 type Lawyer = WorkspaceSnapshot["lawyers"][number];
 
@@ -30,15 +30,5 @@ describe("lawyer selection", () => {
 
   it("has no selection when no lawyers are available", () => {
     expect(resolveSelectedLawyerId([], "removed")).toBeNull();
-  });
-});
-
-describe("document type presentation", () => {
-  it("formats familiar acronyms and open-text types", () => {
-    expect(formatDocumentType("nda")).toBe("NDA");
-    expect(formatDocumentType("saas")).toBe("SaaS");
-    expect(formatDocumentType("master-services_agreement")).toBe(
-      "Master Services Agreement",
-    );
   });
 });
