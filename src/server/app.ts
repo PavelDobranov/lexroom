@@ -2,7 +2,11 @@ import type Database from "better-sqlite3";
 import { Hono } from "hono";
 import type { Context } from "hono";
 
-import type { ApiError, CreateReviewRequest } from "../shared/api";
+import type {
+  ApiError,
+  CreateReviewRequest,
+  ReviewSnapshot,
+} from "../shared/api";
 import { openDatabase, resolveDatabasePath } from "./db/database";
 import { ReviewService, readReviewSnapshot } from "./reviews/review-service";
 import { launchReview as defaultLaunchReview } from "./reviews/runtime";
@@ -27,6 +31,49 @@ const UUID_PATTERN =
 
 function errorBody(code: string, message: string): ApiError {
   return { error: { code, message } };
+}
+
+// Opens a workspace database, runs `use`, and always closes the connection,
+// even when `use` throws. Callers keep their own error handling around this.
+function withDatabase<T>(
+  open: () => Database.Database,
+  run: (sqlite: Database.Database) => T,
+): T {
+  const sqlite = open();
+  try {
+    return run(sqlite);
+  } finally {
+    sqlite.close();
+  }
+}
+
+// Launches an accepted review and returns its snapshot. The runner handles its
+// own foreseeable launch failures; this guards the boundary against any
+// unexpected synchronous throw so an accepted review never stays stuck running
+// (M2-REQ-7), returning the failed snapshot in that case.
+function launchOrFail(
+  dependencies: ApiDependencies,
+  review: ReviewSnapshot,
+  documentId: string,
+): ReviewSnapshot {
+  try {
+    dependencies.launchReview({ reviewId: review.id, documentId });
+    return review;
+  } catch (error) {
+    dependencies.logger.error("Failed to launch the review", error);
+  }
+  try {
+    const failed = withDatabase(dependencies.openWorkspaceDatabase, (sqlite) =>
+      new ReviewService(sqlite, dependencies.now).fail(review.id, "ai_error"),
+    );
+    return failed ?? review;
+  } catch (failError) {
+    dependencies.logger.error(
+      "Failed to transition an unlaunched review to failed",
+      failError,
+    );
+    return review;
+  }
 }
 
 function isTemporaryDatabaseError(error: unknown): boolean {
@@ -106,28 +153,27 @@ export function createApi(
   app.get("/workspace", (c) => {
     c.header("Cache-Control", "no-store");
 
-    let sqlite: Database.Database | undefined;
     try {
-      sqlite = dependencies.openWorkspaceDatabase();
-      return c.json(readWorkspaceSnapshot(sqlite, dependencies.now()));
+      return withDatabase(dependencies.openWorkspaceDatabase, (sqlite) =>
+        c.json(readWorkspaceSnapshot(sqlite, dependencies.now())),
+      );
     } catch (error) {
       dependencies.logger.error("Failed to read the workspace snapshot", error);
       return c.json(
         errorBody("WORKSPACE_UNAVAILABLE", "Workspace data is unavailable."),
         500,
       );
-    } finally {
-      sqlite?.close();
     }
   });
 
   app.get("/reviews/:reviewId", (c) => {
     c.header("Cache-Control", "no-store");
 
-    let sqlite: Database.Database | undefined;
     try {
-      sqlite = dependencies.openWorkspaceDatabase();
-      const snapshot = readReviewSnapshot(sqlite, c.req.param("reviewId"));
+      const snapshot = withDatabase(
+        dependencies.openWorkspaceDatabase,
+        (sqlite) => readReviewSnapshot(sqlite, c.req.param("reviewId")),
+      );
       if (!snapshot) {
         return c.json(
           errorBody("REVIEW_NOT_FOUND", "The review was not found."),
@@ -142,8 +188,6 @@ export function createApi(
         error,
         "Failed to read the review snapshot",
       );
-    } finally {
-      sqlite?.close();
     }
   });
 
@@ -179,16 +223,13 @@ export function createApi(
 
     let result;
     try {
-      const sqlite = dependencies.openWorkspaceDatabase();
-      try {
-        result = new ReviewService(sqlite, dependencies.now).admit({
+      result = withDatabase(dependencies.openWorkspaceDatabase, (sqlite) =>
+        new ReviewService(sqlite, dependencies.now).admit({
           documentId,
           requestedByLawyerId,
           requestId,
-        });
-      } finally {
-        sqlite.close();
-      }
+        }),
+      );
     } catch (error) {
       return respondServiceError(
         c,
@@ -199,33 +240,8 @@ export function createApi(
     }
 
     if (result.outcome === "created") {
-      // Only a newly created review launches execution, and only once. The
-      // runner handles its own foreseeable launch failures; this guards the
-      // boundary against any unexpected synchronous throw so an accepted review
-      // never stays stuck running (M2-REQ-7).
-      let review = result.review;
-      try {
-        dependencies.launchReview({ reviewId: review.id, documentId });
-      } catch (error) {
-        dependencies.logger.error("Failed to launch the review", error);
-        try {
-          const sqlite = dependencies.openWorkspaceDatabase();
-          try {
-            const failed = new ReviewService(sqlite, dependencies.now).fail(
-              review.id,
-              "ai_error",
-            );
-            if (failed) review = failed;
-          } finally {
-            sqlite.close();
-          }
-        } catch (failError) {
-          dependencies.logger.error(
-            "Failed to transition an unlaunched review to failed",
-            failError,
-          );
-        }
-      }
+      // Only a newly created review launches execution, and only once.
+      const review = launchOrFail(dependencies, result.review, documentId);
       c.header("Location", `/api/reviews/${review.id}`);
       return c.json(review, 201);
     }
