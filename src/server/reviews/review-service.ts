@@ -160,6 +160,21 @@ export function readReviewSnapshot(
   return snapshotFromRow(sqlite, row);
 }
 
+function expireRunningReviews(
+  sqlite: Database.Database,
+  now: Date,
+  reviewId?: string,
+): void {
+  const idCondition = reviewId === undefined ? "" : " and id = ?";
+  sqlite
+    .prepare(`
+      update reviews
+      set status = 'failed', failed_at = ?, failure_reason = 'timed_out'
+      where status = 'running' and deadline_at <= ?${idCondition}
+    `)
+    .run(toIsoUtc(now), toIsoUtc(now), ...(reviewId === undefined ? [] : [reviewId]));
+}
+
 function isUniqueConstraintError(error: unknown, fragment: string): boolean {
   if (!(error instanceof Error)) return false;
   const code = (error as { code?: string }).code ?? "";
@@ -201,9 +216,10 @@ export class ReviewService {
           existing.documentId === input.documentId &&
           existing.requestedByLawyerId === input.requestedByLawyerId
         ) {
+          expireRunningReviews(this.sqlite, requestedAtDate, existing.id);
           return {
             outcome: "replayed",
-            review: snapshotFromRow(this.sqlite, existing),
+            review: snapshotFromRow(this.sqlite, loadRow(this.sqlite, existing.id)!),
           };
         }
         return { outcome: "request_id_conflict" };
@@ -218,6 +234,9 @@ export class ReviewService {
         .prepare<[string], { id: string }>("select id from lawyers where id = ?")
         .get(input.requestedByLawyerId);
       if (!lawyerExists) return { outcome: "lawyer_not_found" };
+
+      // Expire overdue reservations before concurrency and allowance checks.
+      expireRunningReviews(this.sqlite, requestedAtDate);
 
       // 4. One running review per document.
       const running = this.sqlite
@@ -293,9 +312,11 @@ export class ReviewService {
    */
   emitFinding(reviewId: string, finding: FindingInput): ReviewSnapshot | null {
     const emit = this.sqlite.transaction((): ReviewSnapshot | null => {
+      const now = this.now();
+      expireRunningReviews(this.sqlite, now, reviewId);
       const row = loadRow(this.sqlite, reviewId);
       if (!row) return null;
-      if (!this.isRunningBeforeDeadline(row)) {
+      if (row.status !== "running") {
         return snapshotFromRow(this.sqlite, row);
       }
       this.sqlite
@@ -312,7 +333,7 @@ export class ReviewService {
           finding.severity,
           finding.excerpt,
           finding.explanation,
-          toIsoUtc(this.now()),
+          toIsoUtc(now),
         );
       return snapshotFromRow(this.sqlite, loadRow(this.sqlite, reviewId)!);
     });
@@ -322,9 +343,11 @@ export class ReviewService {
   /** Completes a running review before its deadline; later callbacks no-op. */
   complete(reviewId: string): ReviewSnapshot | null {
     const finish = this.sqlite.transaction((): ReviewSnapshot | null => {
+      const now = this.now();
+      expireRunningReviews(this.sqlite, now, reviewId);
       const row = loadRow(this.sqlite, reviewId);
       if (!row) return null;
-      if (!this.isRunningBeforeDeadline(row)) {
+      if (row.status !== "running") {
         return snapshotFromRow(this.sqlite, row);
       }
       this.sqlite
@@ -333,7 +356,7 @@ export class ReviewService {
           set status = 'completed', completed_at = ?
           where id = ? and status = 'running'
         `)
-        .run(toIsoUtc(this.now()), reviewId);
+        .run(toIsoUtc(now), reviewId);
       return snapshotFromRow(this.sqlite, loadRow(this.sqlite, reviewId)!);
     });
     return finish.immediate();
@@ -348,6 +371,10 @@ export class ReviewService {
     reason: ReviewFailureReason,
   ): ReviewSnapshot | null {
     const markFailed = this.sqlite.transaction((): ReviewSnapshot | null => {
+      const now = this.now();
+      if (reason === "ai_error") {
+        expireRunningReviews(this.sqlite, now, reviewId);
+      }
       const row = loadRow(this.sqlite, reviewId);
       if (!row) return null;
       if (row.status !== "running") {
@@ -359,14 +386,37 @@ export class ReviewService {
           set status = 'failed', failed_at = ?, failure_reason = ?
           where id = ? and status = 'running'
         `)
-        .run(toIsoUtc(this.now()), reason, reviewId);
+        .run(toIsoUtc(now), reason, reviewId);
       return snapshotFromRow(this.sqlite, loadRow(this.sqlite, reviewId)!);
     });
     return markFailed.immediate();
   }
 
-  private isRunningBeforeDeadline(row: ReviewRow): boolean {
-    if (row.status !== "running") return false;
-    return this.now().getTime() < new Date(row.deadlineAt).getTime();
+  /** Permanently times out this review when its deadline has been reached. */
+  expire(reviewId: string): ReviewSnapshot | null {
+    const expire = this.sqlite.transaction((): ReviewSnapshot | null => {
+      expireRunningReviews(this.sqlite, this.now(), reviewId);
+      const row = loadRow(this.sqlite, reviewId);
+      return row ? snapshotFromRow(this.sqlite, row) : null;
+    });
+    return expire.immediate();
+  }
+
+  /** Reconciles every overdue running review, releasing its reservation. */
+  expireOverdueReviews(): void {
+    const expire = this.sqlite.transaction(() => {
+      expireRunningReviews(this.sqlite, this.now());
+    });
+    expire.immediate();
+  }
+
+  /** Reads one authoritative snapshot after deadline reconciliation. */
+  read(reviewId: string): ReviewSnapshot | null {
+    const read = this.sqlite.transaction((): ReviewSnapshot | null => {
+      expireRunningReviews(this.sqlite, this.now(), reviewId);
+      const row = loadRow(this.sqlite, reviewId);
+      return row ? snapshotFromRow(this.sqlite, row) : null;
+    });
+    return read.immediate();
   }
 }

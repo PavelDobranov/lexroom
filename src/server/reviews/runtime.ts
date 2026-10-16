@@ -1,7 +1,10 @@
 import { openDatabase, resolveDatabasePath } from "../db/database";
 import {
+  createAiFailurePlan,
   createNormalPlan,
+  createProductionPlan,
   createReviewRunner,
+  createSlowPlan,
   type ReviewRunner,
   type Scheduler,
 } from "./review-runner";
@@ -18,15 +21,26 @@ const realScheduler: Scheduler = {
 
 let runner: ReviewRunner | undefined;
 
+function configuredPlan() {
+  const forced = process.env.NODE_ENV === "production"
+    ? undefined
+    : process.env.LEXROOM_REVIEW_PLAN;
+  if (forced === "normal") return createNormalPlan;
+  if (forced === "ai_error") {
+    return (findings: Parameters<typeof createAiFailurePlan>[0]) =>
+      createAiFailurePlan(findings, { prefixLength: findings.length });
+  }
+  if (forced === "slow") return createSlowPlan;
+  return createProductionPlan;
+}
+
 function defaultRunner(): ReviewRunner {
   if (!runner) {
     runner = createReviewRunner({
       openDatabase: () => openDatabase(resolveDatabasePath()),
       now: () => new Date(),
       scheduler: realScheduler,
-      // M2.1 ships only the normal plan; later tickets add failure and slow
-      // plans behind this same seam.
-      createPlan: (findings) => createNormalPlan(findings),
+      createPlan: configuredPlan(),
     });
   }
   return runner;
@@ -36,6 +50,7 @@ function defaultRunner(): ReviewRunner {
 export function launchReview(input: {
   reviewId: string;
   documentId: string;
+  deadlineAt: string;
 }): void {
   defaultRunner().launch(input);
 }

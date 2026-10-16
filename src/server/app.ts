@@ -8,7 +8,7 @@ import type {
   ReviewSnapshot,
 } from "../shared/api";
 import { openDatabase, resolveDatabasePath } from "./db/database";
-import { ReviewService, readReviewSnapshot } from "./reviews/review-service";
+import { ReviewService } from "./reviews/review-service";
 import { launchReview as defaultLaunchReview } from "./reviews/runtime";
 import { readWorkspaceSnapshot } from "./workspace/read-workspace";
 
@@ -16,7 +16,11 @@ type ApiDependencies = {
   openWorkspaceDatabase: () => Database.Database;
   now: () => Date;
   logger: Pick<Console, "error">;
-  launchReview: (input: { reviewId: string; documentId: string }) => void;
+  launchReview: (input: {
+    reviewId: string;
+    documentId: string;
+    deadlineAt: string;
+  }) => void;
 };
 
 const defaultDependencies: ApiDependencies = {
@@ -56,22 +60,37 @@ function launchOrFail(
   review: ReviewSnapshot,
   documentId: string,
 ): ReviewSnapshot {
+  if (review.status !== "running") return review;
   try {
-    dependencies.launchReview({ reviewId: review.id, documentId });
-    return review;
+    dependencies.launchReview({
+      reviewId: review.id,
+      documentId,
+      deadlineAt: review.deadlineAt,
+    });
   } catch (error) {
     dependencies.logger.error("Failed to launch the review", error);
+    try {
+      const failed = withDatabase(dependencies.openWorkspaceDatabase, (sqlite) =>
+        new ReviewService(sqlite, dependencies.now).fail(review.id, "ai_error"),
+      );
+      return failed ?? review;
+    } catch (failError) {
+      dependencies.logger.error(
+        "Failed to transition an unlaunched review to failed",
+        failError,
+      );
+      return review;
+    }
   }
+
+  // Foreseeable runner launch failures transition internally instead of
+  // throwing. Re-read so the create response is authoritative in that case.
   try {
-    const failed = withDatabase(dependencies.openWorkspaceDatabase, (sqlite) =>
-      new ReviewService(sqlite, dependencies.now).fail(review.id, "ai_error"),
-    );
-    return failed ?? review;
-  } catch (failError) {
-    dependencies.logger.error(
-      "Failed to transition an unlaunched review to failed",
-      failError,
-    );
+    return withDatabase(dependencies.openWorkspaceDatabase, (sqlite) =>
+      new ReviewService(sqlite, dependencies.now).read(review.id),
+    ) ?? review;
+  } catch (error) {
+    dependencies.logger.error("Failed to read the launched review", error);
     return review;
   }
 }
@@ -172,7 +191,10 @@ export function createApi(
     try {
       const snapshot = withDatabase(
         dependencies.openWorkspaceDatabase,
-        (sqlite) => readReviewSnapshot(sqlite, c.req.param("reviewId")),
+        (sqlite) =>
+          new ReviewService(sqlite, dependencies.now).read(
+            c.req.param("reviewId"),
+          ),
       );
       if (!snapshot) {
         return c.json(

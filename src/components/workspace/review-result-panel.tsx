@@ -50,9 +50,11 @@ function FindingsList({ findings }: { findings: FindingSnapshot[] }) {
 export function ReviewResultPanel({
   reviewId,
   onClose,
+  onRetry,
 }: {
   reviewId: string;
   onClose: () => void;
+  onRetry: (documentId: string) => void;
 }) {
   const queryClient = useQueryClient();
   const query = useQuery(reviewQueryOptions(reviewId, { enabled: true }));
@@ -80,7 +82,7 @@ export function ReviewResultPanel({
       </div>
 
       <div className="mt-5 max-h-[60vh] overflow-y-auto">
-        <ReviewResultBody query={query} />
+        <ReviewResultBody query={query} onRetry={onRetry} />
       </div>
       {query.isRefetchError && query.data && (
         <p className="mt-4 text-sm text-amber-800" role="status">
@@ -93,8 +95,10 @@ export function ReviewResultPanel({
 
 function ReviewResultBody({
   query,
+  onRetry,
 }: {
   query: ReturnType<typeof useQuery<ReviewSnapshot>>;
+  onRetry: (documentId: string) => void;
 }) {
   if (query.isPending) {
     return (
@@ -154,8 +158,17 @@ function ReviewResultBody({
     );
   }
   return (
-    <p className="text-sm font-medium text-rose-700" role="alert">
-      {presentation.message}
-    </p>
+    <div>
+      <p className="text-sm font-medium text-rose-700" role="alert">
+        {presentation.message}
+      </p>
+      <button
+        type="button"
+        onClick={() => onRetry(query.data!.documentId)}
+        className="mt-4 rounded-lg bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
+      >
+        Retry review
+      </button>
+    </div>
   );
 }
