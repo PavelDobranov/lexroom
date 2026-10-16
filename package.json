@@ -7,6 +7,10 @@
     "build": "next build",
     "start": "next start",
     "db:setup": "tsx scripts/setup-db.ts",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:check": "drizzle-kit check",
+    "db:studio": "drizzle-kit studio",
     "test": "vitest run",
     "lint": "eslint"
   },
