@@ -22,11 +22,9 @@ html {
 
 body {
   margin: 0;
-  background:
-    radial-gradient(circle at 85% 0%, rgb(224 231 255 / 65%), transparent 30rem),
-    var(--background);
+  background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
 
 button,
