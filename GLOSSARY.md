@@ -11,7 +11,7 @@ The shared area containing the firm's lawyers, documents, reviews, and monthly r
 A contract available in the workspace for review. A document may supersede an earlier version but remains independently reviewable.
 
 **Review**:
-One requested AI analysis of one document, attributed to the lawyer who requested it. A review is either `running`, `completed`, or `failed`.
+One requested AI analysis of one document, attributed to the lawyer who requested it. A review is either `running`, `completed`, or `failed`; a retry is a new review, not a new kind of entity.
 _Avoid_: Job, task, analysis
 
 **Finding**:
