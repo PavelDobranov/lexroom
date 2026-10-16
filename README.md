@@ -19,7 +19,9 @@ The original requirements are available in [docs/assignment.md](docs/assignment.
 
 ## Getting started
 
-**Prerequisites:** Node.js 20.9+ and npm.
+**Prerequisites:** Node.js 22+ and npm.
+
+If you use NVM, run `nvm use` in the repository to select the version declared in `.nvmrc`.
 
 Clone the repository, install dependencies, initialize the database, and start the application:
 
