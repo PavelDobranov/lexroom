@@ -321,6 +321,26 @@ describe("database setup", () => {
       ).toThrow(/CHECK constraint failed/);
       expect(() =>
         insertDocument.run(
+          "invalid-month",
+          "Invalid",
+          "other",
+          1,
+          "2026-13-01T00:00:00Z",
+          lawyerFixtures[0].id,
+        ),
+      ).toThrow(/CHECK constraint failed/);
+      expect(() =>
+        insertDocument.run(
+          "invalid-minute",
+          "Invalid",
+          "other",
+          1,
+          "2026-01-01T23:60:00Z",
+          lawyerFixtures[0].id,
+        ),
+      ).toThrow(/CHECK constraint failed/);
+      expect(() =>
+        insertDocument.run(
           "fractional-seconds",
           "Valid",
           "other",

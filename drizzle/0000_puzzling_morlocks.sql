@@ -13,6 +13,7 @@ CREATE TABLE `documents` (
 	CONSTRAINT "documents_pages_positive_integer" CHECK(typeof("documents"."pages") = 'integer' and "documents"."pages" > 0),
 	CONSTRAINT "documents_uploaded_at_iso_8601_utc" CHECK(
         substr("documents"."uploaded_at", 1, 19) glob '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T[0-9][0-9]:[0-9][0-9]:[0-9][0-9]'
+        and unixepoch("documents"."uploaded_at") is not null
         and strftime('%Y-%m-%dT%H:%M:%S', unixepoch("documents"."uploaded_at"), 'unixepoch') = substr("documents"."uploaded_at", 1, 19)
         and (
           (length("documents"."uploaded_at") = 20 and substr("documents"."uploaded_at", 20, 1) = 'Z')

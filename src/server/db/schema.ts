@@ -46,6 +46,7 @@ export const documents = sqliteTable(
       "documents_uploaded_at_iso_8601_utc",
       sql`
         substr(${table.uploadedAt}, 1, 19) glob '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T[0-9][0-9]:[0-9][0-9]:[0-9][0-9]'
+        and unixepoch(${table.uploadedAt}) is not null
         and strftime('%Y-%m-%dT%H:%M:%S', unixepoch(${table.uploadedAt}), 'unixepoch') = substr(${table.uploadedAt}, 1, 19)
         and (
           (length(${table.uploadedAt}) = 20 and substr(${table.uploadedAt}, 20, 1) = 'Z')
