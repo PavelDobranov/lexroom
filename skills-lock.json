@@ -19,11 +19,41 @@
       "skillPath": "skills/productivity/grilling/SKILL.md",
       "computedHash": "ef1641a2047b71b60f1942cd35efb47d3afc9d584dff5a0b01f8c7db923aaa08"
     },
+    "plan": {
+      "source": "owainlewis/blueprint",
+      "sourceType": "github",
+      "skillPath": "skills/plan/SKILL.md",
+      "computedHash": "f8dee67711a5716759b20e702e4565573c300aa030a73306945553085e552222"
+    },
+    "review": {
+      "source": "owainlewis/blueprint",
+      "sourceType": "github",
+      "skillPath": "skills/review/SKILL.md",
+      "computedHash": "7209ba51fdc2aacdc17f31069991302e462719ea10333ebdaac64c6a158b611f"
+    },
     "setup-matt-pocock-skills": {
       "source": "mattpocock/skills",
       "sourceType": "github",
       "skillPath": "skills/engineering/setup-matt-pocock-skills/SKILL.md",
       "computedHash": "1d35d0afa3ded88c9324d38db08b2cff91cd03e0e11d64786bee41385cd7b9fb"
+    },
+    "spec": {
+      "source": "owainlewis/blueprint",
+      "sourceType": "github",
+      "skillPath": "skills/spec/SKILL.md",
+      "computedHash": "f156f1c4e20d5828435a3ad151a49047b2587484b738d8b8c17537f78ecfaf01"
+    },
+    "task-to-pr": {
+      "source": "owainlewis/blueprint",
+      "sourceType": "github",
+      "skillPath": "skills/task-to-pr/SKILL.md",
+      "computedHash": "b9aafc56800c7b0835305c1bc1c36c8a38743cd3eac59d406d1cba088224d9ef"
+    },
+    "test": {
+      "source": "owainlewis/blueprint",
+      "sourceType": "github",
+      "skillPath": "skills/test/SKILL.md",
+      "computedHash": "be0f8441377e27b440698b094789f783ffde92acf5c9c5a93d66f5a3c5dc57a6"
     },
     "triage": {
       "source": "mattpocock/skills",
