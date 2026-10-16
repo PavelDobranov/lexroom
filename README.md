@@ -212,6 +212,7 @@ GitHub Issues served as the source of truth for implementation scope and accepta
 
 | Milestone | Specification | Implementation tickets |
 |---|---|---|
+| MVP — Implementation Roadmap | [#1](https://github.com/PavelDobranov/lexroom/issues/1) | — |
 | M1 — Persistent Workspace Foundation | [#2](https://github.com/PavelDobranov/lexroom/issues/2) | [#3](https://github.com/PavelDobranov/lexroom/issues/3), [#4](https://github.com/PavelDobranov/lexroom/issues/4), [#5](https://github.com/PavelDobranov/lexroom/issues/5) |
 | M2 — Correct End-to-End Review Lifecycle | [#10](https://github.com/PavelDobranov/lexroom/issues/10) | [#11](https://github.com/PavelDobranov/lexroom/issues/11), [#12](https://github.com/PavelDobranov/lexroom/issues/12), [#13](https://github.com/PavelDobranov/lexroom/issues/13), [#14](https://github.com/PavelDobranov/lexroom/issues/14) |
 
