@@ -14,6 +14,7 @@ function ReviewStatusBadge({ attempt }: { attempt: ReviewSummary | null }) {
       </span>
     );
   }
+
   if (attempt.status === "running") {
     return (
       <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-700">
@@ -22,6 +23,7 @@ function ReviewStatusBadge({ attempt }: { attempt: ReviewSummary | null }) {
       </span>
     );
   }
+
   if (attempt.status === "completed") {
     return (
       <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700">
@@ -30,6 +32,7 @@ function ReviewStatusBadge({ attempt }: { attempt: ReviewSummary | null }) {
       </span>
     );
   }
+
   return (
     <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-rose-700">
       <span className="size-2 rounded-full bg-rose-500" aria-hidden="true" />

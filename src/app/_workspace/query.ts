@@ -18,12 +18,14 @@ export async function fetchWorkspace(): Promise<WorkspaceSnapshot> {
 
   if (!response.ok) {
     let message = "The workspace could not be loaded.";
+
     try {
       const body = (await response.json()) as ApiError;
       if (body.error?.message) message = body.error.message;
     } catch {
       // Keep the safe fallback when the server does not return JSON.
     }
+
     throw new WorkspaceRequestError(message);
   }
 

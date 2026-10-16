@@ -26,13 +26,21 @@ async function readApiError(
 ): Promise<ReviewRequestError> {
   let message = fallback;
   let code: string | null = null;
+
   try {
     const body = (await response.json()) as ApiError;
-    if (body.error?.message) message = body.error.message;
-    if (body.error?.code) code = body.error.code;
+
+    if (body.error?.message) {
+      message = body.error.message;
+    }
+
+    if (body.error?.code) {
+      code = body.error.code;
+    }
   } catch {
     // Keep the safe fallback when the server does not return JSON.
   }
+
   return new ReviewRequestError(message, code, response.status);
 }
 
@@ -41,9 +49,11 @@ export async function fetchReview(reviewId: string): Promise<ReviewSnapshot> {
     cache: "no-store",
     headers: { Accept: "application/json" },
   });
+
   if (!response.ok) {
     throw await readApiError(response, "The review could not be loaded.");
   }
+
   return (await response.json()) as ReviewSnapshot;
 }
 
@@ -71,9 +81,11 @@ export async function requestReview(
       }),
     },
   );
+
   if (!response.ok) {
     throw await readApiError(response, "The review could not be requested.");
   }
+
   return (await response.json()) as ReviewSnapshot;
 }
 
@@ -86,11 +98,6 @@ type ReviewRequestCoordinatorOptions = {
   send?: (input: RequestReviewInput) => Promise<ReviewSnapshot>;
 };
 
-/**
- * Keeps the idempotency key for an ambiguously answered submission outside the
- * confirmation dialog lifecycle. Success and definitive 4xx outcomes clear the
- * key; network and 5xx failures retain it for a safe replay.
- */
 export function createReviewRequestCoordinator(
   options: ReviewRequestCoordinatorOptions = {},
 ) {
@@ -107,6 +114,7 @@ export function createReviewRequestCoordinator(
     const key = keyFor(input);
     const existing = unresolvedByIntent.get(key);
     const requestId = existing?.requestId ?? createRequestId();
+
     unresolvedByIntent.set(key, existing ?? {
       requestId,
       baselineLatestReviewId: input.baselineLatestReviewId,
@@ -118,14 +126,11 @@ export function createReviewRequestCoordinator(
         requestedByLawyerId: input.requestedByLawyerId,
         requestId,
       });
+
       if (unresolvedByIntent.get(key)?.requestId === requestId) {
         unresolvedByIntent.delete(key);
       }
 
-      // A changed latest Review means this click is a later intentional retry,
-      // but it does not prove which request produced that Review. First replay
-      // the retained ID to establish its outcome. Only after a terminal replay
-      // is known do we submit the intentional retry with a fresh ID.
       if (
         existing &&
         input.baselineLatestReviewId !== existing.baselineLatestReviewId &&
@@ -133,14 +138,17 @@ export function createReviewRequestCoordinator(
       ) {
         return submit(input);
       }
+
       return review;
     } catch (error) {
       const status = error instanceof ReviewRequestError ? error.status : null;
+
       if (status !== null && status < 500) {
         if (unresolvedByIntent.get(key)?.requestId === requestId) {
           unresolvedByIntent.delete(key);
         }
       }
+
       throw error;
     }
   }
@@ -159,11 +167,6 @@ export function submitReviewRequest(input: ReviewIntent): Promise<ReviewSnapshot
   return reviewRequestCoordinator.submit(input);
 }
 
-/**
- * Query options for one review. An actively viewed running review polls every
- * second and stops at a terminal status; interval polling pauses in background
- * tabs and refetches on focus (M2-REQ-13).
- */
 export function reviewQueryOptions(reviewId: string, options: { enabled: boolean }) {
   return {
     queryKey: reviewQueryKey(reviewId),

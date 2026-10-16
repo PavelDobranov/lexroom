@@ -145,6 +145,7 @@ function ReviewResultBody({
   }
 
   const presentation = resolveReviewPresentation(query.data);
+
   if (presentation.kind === "running") {
     return (
       <div>
@@ -164,9 +165,11 @@ function ReviewResultBody({
       </div>
     );
   }
+
   if (presentation.kind === "completed-empty") {
     return <p className="text-base font-medium text-emerald-700">No issues flagged.</p>;
   }
+
   if (presentation.kind === "completed") {
     return (
       <div>
@@ -175,6 +178,7 @@ function ReviewResultBody({
       </div>
     );
   }
+
   return (
     <div>
       <p className="text-sm font-medium text-rose-700" role="alert">

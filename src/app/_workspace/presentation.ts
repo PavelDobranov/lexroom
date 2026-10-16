@@ -1,8 +1,14 @@
-/** Presents a document type: known acronyms verbatim, otherwise Title Case. */
 export function formatDocumentType(type: string): string {
   const normalized = type.trim().toLowerCase();
-  if (normalized === "nda") return "NDA";
-  if (normalized === "saas") return "SaaS";
+
+  if (normalized === "nda") {
+    return "NDA";
+  }
+
+  if (normalized === "saas") {
+    return "SaaS";
+  }
+
   return normalized
     .split(/[-_\s]+/)
     .filter(Boolean)

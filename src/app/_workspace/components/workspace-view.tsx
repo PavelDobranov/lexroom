@@ -12,13 +12,13 @@ import type { WorkspaceSnapshot } from "../../../shared/api";
 import { ReviewConfirmationDialog } from "../../_review/components/review-confirmation-dialog";
 import { ReviewResultPanel } from "../../_review/components/review-result-panel";
 import { reviewIdsToOpen } from "../../_review/presentation";
+import { WORKSPACE_QUERY_KEY, WORKSPACE_QUERY_OPTIONS } from "../query";
 import {
   readSelectedLawyerId,
   resolveSelectedLawyerId,
   subscribeToSelectedLawyer,
   writeSelectedLawyerId,
 } from "../selection";
-import { WORKSPACE_QUERY_KEY, WORKSPACE_QUERY_OPTIONS } from "../query";
 import { DocumentCard } from "./document-card";
 import { LawyerPicker } from "./lawyer-picker";
 import { InitialError, NoLawyers, WorkspaceLoading } from "./status-screens";
@@ -38,12 +38,21 @@ function WorkspaceContent() {
     return () => window.removeEventListener("focus", refetchOnFocus);
   }, [queryClient]);
 
-  if (query.isPending) return <WorkspaceLoading />;
+  if (query.isPending) {
+    return <WorkspaceLoading />;
+  }
+
   if (!query.data && query.isError) {
     return <InitialError message={query.error.message} retry={() => void query.refetch()} />;
   }
-  if (!query.data) return null;
-  if (query.data.lawyers.length === 0) return <NoLawyers />;
+
+  if (!query.data) {
+    return null;
+  }
+
+  if (query.data.lawyers.length === 0) {
+    return <NoLawyers />;
+  }
 
   return (
     <WorkspaceReady
@@ -90,11 +99,11 @@ function WorkspaceReady({
   const activeLawyer = lawyersById.get(activeLawyerId);
   const dialogDocument = dialogDocumentId
     ? snapshot.documents.find((document) => document.id === dialogDocumentId) ??
-      null
+    null
     : null;
   const openDocument = openReview
     ? snapshot.documents.find((document) => document.id === openReview.documentId) ??
-      null
+    null
     : null;
   const reviewIds = openDocument
     ? reviewIdsToOpen(openDocument, openReview?.latestReviewId)
