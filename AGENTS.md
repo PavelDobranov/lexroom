@@ -11,3 +11,17 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 ## Hono documentation
 
 Before writing or modifying Hono code, refer to https://hono.dev/llms-small.txt.
+
+## Agent skills
+
+### Issue tracker
+
+Issues are tracked in GitHub Issues. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Triage uses the five default canonical labels. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Domain documentation uses a single-context layout. See `docs/agents/domain.md`.
