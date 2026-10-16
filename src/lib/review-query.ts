@@ -1,10 +1,6 @@
 import type { Query } from "@tanstack/react-query";
 
-import type {
-  ApiError,
-  ReviewSnapshot,
-  WorkspaceSnapshot,
-} from "../shared/api";
+import type { ApiError, ReviewSnapshot } from "../shared/api";
 
 export const REVIEW_POLL_INTERVAL_MS = 1_000;
 
@@ -102,55 +98,55 @@ export function createReviewRequestCoordinator(
   const send = options.send ?? requestReview;
   const unresolvedByIntent = new Map<
     string,
-    { requestId: string; baselineLatestReviewId: string | null; documentId: string }
+    { requestId: string; baselineLatestReviewId: string | null }
   >();
   const keyFor = (input: ReviewIntent) =>
     `${input.documentId}\u0000${input.requestedByLawyerId}`;
 
-  return {
-    async submit(input: ReviewIntent): Promise<ReviewSnapshot> {
-      const key = keyFor(input);
-      const existing = unresolvedByIntent.get(key);
-      const requestId = existing?.requestId ?? createRequestId();
-      unresolvedByIntent.set(key, existing ?? {
-        requestId,
-        baselineLatestReviewId: input.baselineLatestReviewId,
-        documentId: input.documentId,
-      });
+  async function submit(input: ReviewIntent): Promise<ReviewSnapshot> {
+    const key = keyFor(input);
+    const existing = unresolvedByIntent.get(key);
+    const requestId = existing?.requestId ?? createRequestId();
+    unresolvedByIntent.set(key, existing ?? {
+      requestId,
+      baselineLatestReviewId: input.baselineLatestReviewId,
+    });
 
-      try {
-        const review = await send({
-          documentId: input.documentId,
-          requestedByLawyerId: input.requestedByLawyerId,
-          requestId,
-        });
+    try {
+      const review = await send({
+        documentId: input.documentId,
+        requestedByLawyerId: input.requestedByLawyerId,
+        requestId,
+      });
+      if (unresolvedByIntent.get(key)?.requestId === requestId) {
+        unresolvedByIntent.delete(key);
+      }
+
+      // A changed latest Review means this click is a later intentional retry,
+      // but it does not prove which request produced that Review. First replay
+      // the retained ID to establish its outcome. Only after a terminal replay
+      // is known do we submit the intentional retry with a fresh ID.
+      if (
+        existing &&
+        input.baselineLatestReviewId !== existing.baselineLatestReviewId &&
+        review.status !== "running"
+      ) {
+        return submit(input);
+      }
+      return review;
+    } catch (error) {
+      const status = error instanceof ReviewRequestError ? error.status : null;
+      if (status !== null && status < 500) {
         if (unresolvedByIntent.get(key)?.requestId === requestId) {
           unresolvedByIntent.delete(key);
         }
-        return review;
-      } catch (error) {
-        const status = error instanceof ReviewRequestError ? error.status : null;
-        if (status !== null && status < 500) {
-          if (unresolvedByIntent.get(key)?.requestId === requestId) {
-            unresolvedByIntent.delete(key);
-          }
-        }
-        throw error;
       }
-    },
-    resolveFromWorkspace(snapshot: WorkspaceSnapshot): void {
-      for (const [key, unresolved] of unresolvedByIntent) {
-        const document = snapshot.documents.find(
-          (candidate) => candidate.id === unresolved.documentId,
-        );
-        if (
-          document &&
-          document.latestReviewAttempt?.id !== unresolved.baselineLatestReviewId
-        ) {
-          unresolvedByIntent.delete(key);
-        }
-      }
-    },
+      throw error;
+    }
+  }
+
+  return {
+    submit,
     unresolvedRequestId(input: ReviewIntent): string | null {
       return unresolvedByIntent.get(keyFor(input))?.requestId ?? null;
     },
@@ -161,12 +157,6 @@ const reviewRequestCoordinator = createReviewRequestCoordinator();
 
 export function submitReviewRequest(input: ReviewIntent): Promise<ReviewSnapshot> {
   return reviewRequestCoordinator.submit(input);
-}
-
-export function resolveReviewRequestsFromWorkspace(
-  snapshot: WorkspaceSnapshot,
-): void {
-  reviewRequestCoordinator.resolveFromWorkspace(snapshot);
 }
 
 /**

@@ -1,7 +1,7 @@
 import { QueryClient, type Query } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { ReviewSnapshot, WorkspaceSnapshot } from "../shared/api";
+import type { ReviewSnapshot } from "../shared/api";
 import {
   createReviewRequestCoordinator,
   fetchReview,
@@ -152,87 +152,61 @@ describe("review request coordination", () => {
     expect(coordinator.unresolvedRequestId(intent)).toBeNull();
   });
 
-  it("uses a new ID once workspace polling reveals the committed outcome", async () => {
+  it("resolves a terminal ambiguous outcome before one-click intentional retry", async () => {
     const sentIds: string[] = [];
     const ids = ["request-1", "request-2"];
-    let attempt = 0;
+    const terminalSnapshot: ReviewSnapshot = {
+      ...runningSnapshot,
+      status: "failed",
+      failedAt: "2026-10-16T12:00:10.000Z",
+      failureReason: "ai_error",
+    };
+    const outcomes: Array<Error | ReviewSnapshot> = [
+      new ReviewRequestError("Lost response", "INTERNAL_ERROR", 500),
+      terminalSnapshot,
+      runningSnapshot,
+    ];
     const coordinator = createReviewRequestCoordinator({
       createRequestId: () => ids.shift()!,
       send: vi.fn(async ({ requestId }) => {
         sentIds.push(requestId);
-        attempt += 1;
-        if (attempt === 1) {
-          throw new ReviewRequestError("Lost response", "INTERNAL_ERROR", 500);
-        }
-        return runningSnapshot;
+        const outcome = outcomes.shift()!;
+        if (outcome instanceof Error) throw outcome;
+        return outcome;
       }),
     });
-    const retryIntent = { ...intent, baselineLatestReviewId: "old-review" };
 
-    await expect(coordinator.submit(retryIntent)).rejects.toMatchObject({
-      status: 500,
-    });
-    coordinator.resolveFromWorkspace({
-      lawyers: [],
-      monthlyAllowance: {
-        month: "2026-10",
-        limit: 10,
-        completed: 1,
-        reserved: 0,
-        available: 9,
-      },
-      documents: [
-        {
-          id: "doc-1",
-          title: "Document",
-          type: "other",
-          pages: 1,
-          uploadedAt: "2026-10-01T00:00:00.000Z",
-          uploadedByLawyerId: "lawyer-1",
-          supersedesDocumentId: null,
-          latestReviewAttempt: {
-            id: "committed-review",
-            documentId: "doc-1",
-            requestedByLawyerId: "lawyer-1",
-            requestedAt: "2026-10-16T12:00:00.000Z",
-            allowanceMonth: "2026-10",
-            status: "failed",
-            failedAt: "2026-10-16T12:00:10.000Z",
-            failureReason: "ai_error",
-          },
-          latestSuccessfulReview: null,
-        },
-      ],
-    } satisfies WorkspaceSnapshot);
+    await expect(coordinator.submit(intent)).rejects.toMatchObject({ status: 500 });
+    await expect(
+      coordinator.submit({ ...intent, baselineLatestReviewId: "observed-review" }),
+    ).resolves.toEqual(runningSnapshot);
 
-    expect(coordinator.unresolvedRequestId(retryIntent)).toBeNull();
-    await expect(coordinator.submit(retryIntent)).resolves.toEqual(runningSnapshot);
-    expect(sentIds).toEqual(["request-1", "request-2"]);
+    expect(sentIds).toEqual(["request-1", "request-1", "request-2"]);
+    expect(coordinator.unresolvedRequestId(intent)).toBeNull();
   });
 
-  it("does not resolve ambiguity when polling still shows the baseline", async () => {
+  it("does not discard ambiguity when an unrelated Review becomes latest", async () => {
+    const sentIds: string[] = [];
+    const outcomes: Array<Error | ReviewSnapshot> = [
+      new TypeError("network failed"),
+      runningSnapshot,
+    ];
     const coordinator = createReviewRequestCoordinator({
       createRequestId: () => "request-1",
-      send: vi.fn(async () => {
-        throw new TypeError("network failed");
+      send: vi.fn(async ({ requestId }) => {
+        sentIds.push(requestId);
+        const outcome = outcomes.shift()!;
+        if (outcome instanceof Error) throw outcome;
+        return outcome;
       }),
     });
-    const retryIntent = { ...intent, baselineLatestReviewId: "old-review" };
-    await expect(coordinator.submit(retryIntent)).rejects.toThrow("network failed");
 
-    coordinator.resolveFromWorkspace({
-      lawyers: [],
-      documents: [],
-      monthlyAllowance: {
-        month: "2026-10",
-        limit: 10,
-        completed: 0,
-        reserved: 0,
-        available: 10,
-      },
-    });
+    await expect(coordinator.submit(intent)).rejects.toThrow("network failed");
+    await expect(
+      coordinator.submit({ ...intent, baselineLatestReviewId: "unrelated-review" }),
+    ).resolves.toEqual(runningSnapshot);
 
-    expect(coordinator.unresolvedRequestId(retryIntent)).toBe("request-1");
+    expect(sentIds).toEqual(["request-1", "request-1"]);
   });
 
   it("uses a new ID after a known outcome or a completed submission", async () => {
