@@ -199,13 +199,35 @@ export function createApi(
     }
 
     if (result.outcome === "created") {
-      // Only a newly created review launches execution, and only once.
-      dependencies.launchReview({
-        reviewId: result.review.id,
-        documentId,
-      });
-      c.header("Location", `/api/reviews/${result.review.id}`);
-      return c.json(result.review, 201);
+      // Only a newly created review launches execution, and only once. The
+      // runner handles its own foreseeable launch failures; this guards the
+      // boundary against any unexpected synchronous throw so an accepted review
+      // never stays stuck running (M2-REQ-7).
+      let review = result.review;
+      try {
+        dependencies.launchReview({ reviewId: review.id, documentId });
+      } catch (error) {
+        dependencies.logger.error("Failed to launch the review", error);
+        try {
+          const sqlite = dependencies.openWorkspaceDatabase();
+          try {
+            const failed = new ReviewService(sqlite, dependencies.now).fail(
+              review.id,
+              "ai_error",
+            );
+            if (failed) review = failed;
+          } finally {
+            sqlite.close();
+          }
+        } catch (failError) {
+          dependencies.logger.error(
+            "Failed to transition an unlaunched review to failed",
+            failError,
+          );
+        }
+      }
+      c.header("Location", `/api/reviews/${review.id}`);
+      return c.json(review, 201);
     }
     if (result.outcome === "replayed") {
       return c.json(result.review, 200);

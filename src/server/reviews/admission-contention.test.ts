@@ -90,6 +90,29 @@ describe("admission contention", () => {
     }
   });
 
+  it("serializes competing writers through the SQLite write lock", () => {
+    const connectionA = openDatabase(databasePath);
+    const connectionB = openDatabase(databasePath);
+    try {
+      // Fail fast instead of waiting the default busy timeout for this probe.
+      connectionB.pragma("busy_timeout = 1");
+
+      // Connection A holds a RESERVED write lock via an open IMMEDIATE transaction.
+      connectionA.exec("BEGIN IMMEDIATE");
+      // Connection B's admission (BEGIN IMMEDIATE) cannot acquire the lock.
+      expect(() => admit(connectionB, documents[0])).toThrow(
+        /SQLITE_BUSY|database is locked/i,
+      );
+
+      // Once A releases, B serializes behind it and admits successfully.
+      connectionA.exec("ROLLBACK");
+      expect(admit(connectionB, documents[0]).outcome).toBe("created");
+    } finally {
+      connectionA.close();
+      connectionB.close();
+    }
+  });
+
   it("cannot consume the final allowance slot twice across different documents", () => {
     const connectionA = openDatabase(databasePath);
     const connectionB = openDatabase(databasePath);
