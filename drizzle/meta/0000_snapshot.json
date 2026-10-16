@@ -1,0 +1,161 @@
+{
+  "version": "6",
+  "dialect": "sqlite",
+  "id": "c5c5d924-bf13-4ab1-ac78-54cf94d73fc2",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "tables": {
+    "documents": {
+      "name": "documents",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "type": {
+          "name": "type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "pages": {
+          "name": "pages",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "uploaded_at": {
+          "name": "uploaded_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "uploaded_by_lawyer_id": {
+          "name": "uploaded_by_lawyer_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "supersedes_document_id": {
+          "name": "supersedes_document_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "documents_uploaded_by_lawyer_id_lawyers_id_fk": {
+          "name": "documents_uploaded_by_lawyer_id_lawyers_id_fk",
+          "tableFrom": "documents",
+          "tableTo": "lawyers",
+          "columnsFrom": [
+            "uploaded_by_lawyer_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "documents_supersedes_document_id_documents_id_fk": {
+          "name": "documents_supersedes_document_id_documents_id_fk",
+          "tableFrom": "documents",
+          "tableTo": "documents",
+          "columnsFrom": [
+            "supersedes_document_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "documents_title_non_empty": {
+          "name": "documents_title_non_empty",
+          "value": "length(trim(\"documents\".\"title\")) > 0"
+        },
+        "documents_type_non_empty": {
+          "name": "documents_type_non_empty",
+          "value": "length(trim(\"documents\".\"type\")) > 0"
+        },
+        "documents_pages_positive_integer": {
+          "name": "documents_pages_positive_integer",
+          "value": "typeof(\"documents\".\"pages\") = 'integer' and \"documents\".\"pages\" > 0"
+        },
+        "documents_uploaded_at_iso_8601_utc": {
+          "name": "documents_uploaded_at_iso_8601_utc",
+          "value": "\n        substr(\"documents\".\"uploaded_at\", 1, 19) glob '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T[0-9][0-9]:[0-9][0-9]:[0-9][0-9]'\n        and unixepoch(\"documents\".\"uploaded_at\") is not null\n        and strftime('%Y-%m-%dT%H:%M:%S', unixepoch(\"documents\".\"uploaded_at\"), 'unixepoch') = substr(\"documents\".\"uploaded_at\", 1, 19)\n        and (\n          (length(\"documents\".\"uploaded_at\") = 20 and substr(\"documents\".\"uploaded_at\", 20, 1) = 'Z')\n          or (\n            length(\"documents\".\"uploaded_at\") > 21\n            and substr(\"documents\".\"uploaded_at\", 20, 1) = '.'\n            and substr(\"documents\".\"uploaded_at\", -1, 1) = 'Z'\n            and substr(\"documents\".\"uploaded_at\", 21, length(\"documents\".\"uploaded_at\") - 21) not glob '*[^0-9]*'\n          )\n        )\n      "
+        }
+      }
+    },
+    "lawyers": {
+      "name": "lawyers",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "lawyers_name_non_empty": {
+          "name": "lawyers_name_non_empty",
+          "value": "length(trim(\"lawyers\".\"name\")) > 0"
+        },
+        "lawyers_title_non_empty": {
+          "name": "lawyers_title_non_empty",
+          "value": "length(trim(\"lawyers\".\"title\")) > 0"
+        }
+      }
+    }
+  },
+  "views": {},
+  "enums": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
+    "indexes": {}
+  }
+}
