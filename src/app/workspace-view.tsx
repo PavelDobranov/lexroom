@@ -3,12 +3,35 @@
 import {
   QueryClient,
   QueryClientProvider,
+  useMutation,
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+} from "react";
 
-import type { WorkspaceSnapshot } from "../shared/api";
+import type {
+  FindingSnapshot,
+  ReviewSnapshot,
+  ReviewSummary,
+  WorkspaceSnapshot,
+} from "../shared/api";
+import {
+  describeAllowanceAvailability,
+  isTerminalStatus,
+  resolveReviewPresentation,
+  reviewActionLabel,
+} from "./review-presentation";
+import {
+  requestReview,
+  ReviewRequestError,
+  reviewQueryOptions,
+} from "./review-query";
 import {
   WORKSPACE_QUERY_KEY,
   WORKSPACE_QUERY_OPTIONS,
@@ -120,26 +143,64 @@ function InitialError({ message, retry }: { message: string; retry: () => void }
   );
 }
 
+function ReviewStatusBadge({ attempt }: { attempt: ReviewSummary | null }) {
+  if (!attempt) {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-700">
+        <span className="size-2 rounded-full bg-amber-500" aria-hidden="true" />
+        Not reviewed
+      </span>
+    );
+  }
+  if (attempt.status === "running") {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-700">
+        <span className="size-2 animate-pulse rounded-full bg-indigo-500" aria-hidden="true" />
+        Review in progress
+      </span>
+    );
+  }
+  if (attempt.status === "completed") {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700">
+        <span className="size-2 rounded-full bg-emerald-500" aria-hidden="true" />
+        Reviewed
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-rose-700">
+      <span className="size-2 rounded-full bg-rose-500" aria-hidden="true" />
+      Review failed
+    </span>
+  );
+}
+
 function DocumentCard({
   document,
   uploader,
+  onRequest,
+  onView,
 }: {
   document: Document;
   uploader: Lawyer | undefined;
+  onRequest: () => void;
+  onView: (reviewId: string) => void;
 }) {
+  const attempt = document.latestReviewAttempt;
+  const label = reviewActionLabel(attempt);
+  const running = attempt?.status === "running";
+
   return (
     <li className="flex min-h-60 flex-col rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
       <div className="flex items-start justify-between gap-4">
         <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
           {formatDocumentType(document.type)}
         </span>
-        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-700">
-          <span className="size-2 rounded-full bg-amber-500" aria-hidden="true" />
-          Not reviewed
-        </span>
+        <ReviewStatusBadge attempt={attempt} />
       </div>
       <h3 className="mt-5 text-lg font-semibold leading-7 text-slate-950">{document.title}</h3>
-      <dl className="mt-auto grid grid-cols-2 gap-x-4 gap-y-3 pt-7 text-sm">
+      <dl className="mt-6 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
         <div>
           <dt className="text-slate-500">Pages</dt>
           <dd className="mt-0.5 font-medium text-slate-800">{document.pages}</dd>
@@ -155,7 +216,331 @@ function DocumentCard({
           </dd>
         </div>
       </dl>
+      <div className="mt-auto flex flex-wrap gap-2 pt-6">
+        {running ? (
+          <button
+            type="button"
+            onClick={() => onView(attempt!.id)}
+            className="rounded-lg bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-950"
+          >
+            Review in progress
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={onRequest}
+            className="rounded-lg bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-950"
+          >
+            {label}
+          </button>
+        )}
+        {attempt && !running && (
+          <button
+            type="button"
+            onClick={() => onView(attempt.id)}
+            className="rounded-lg px-4 py-2.5 text-sm font-semibold text-slate-700 ring-1 ring-slate-300 transition hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-950"
+          >
+            View result
+          </button>
+        )}
+      </div>
     </li>
+  );
+}
+
+function ModalShell({
+  labelledBy,
+  onClose,
+  children,
+}: {
+  labelledBy: string;
+  onClose: () => void;
+  children: ReactNode;
+}) {
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div
+        className="absolute inset-0 bg-slate-950/40"
+        aria-hidden="true"
+        onClick={onClose}
+      />
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={labelledBy}
+        className="relative z-10 w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl ring-1 ring-slate-200"
+      >
+        {children}
+      </section>
+    </div>
+  );
+}
+
+function ReviewConfirmationDialog({
+  document,
+  lawyer,
+  allowance,
+  onClose,
+  onCreated,
+}: {
+  document: Document;
+  lawyer: Lawyer;
+  allowance: WorkspaceSnapshot["monthlyAllowance"];
+  onClose: () => void;
+  onCreated: (reviewId: string) => void;
+}) {
+  const queryClient = useQueryClient();
+  // One request ID per intentional confirmation.
+  const [requestId] = useState(() => crypto.randomUUID());
+  const availability = describeAllowanceAvailability(allowance);
+
+  const mutation = useMutation({
+    mutationFn: () =>
+      requestReview({
+        documentId: document.id,
+        requestedByLawyerId: lawyer.id,
+        requestId,
+      }),
+    onSuccess: (review) => {
+      void queryClient.invalidateQueries({ queryKey: WORKSPACE_QUERY_KEY });
+      onCreated(review.id);
+    },
+    onError: () => {
+      // Admission conflicts leave the dialog open and refresh the workspace;
+      // the server stays authoritative when the visible snapshot is stale.
+      void queryClient.invalidateQueries({ queryKey: WORKSPACE_QUERY_KEY });
+    },
+  });
+
+  const conflictMessage =
+    mutation.error instanceof ReviewRequestError
+      ? mutation.error.message
+      : mutation.isError
+        ? "The review could not be requested."
+        : null;
+
+  return (
+    <ModalShell labelledBy="review-dialog-title" onClose={onClose}>
+      <h2 id="review-dialog-title" className="text-xl font-semibold text-slate-950">
+        Request a review
+      </h2>
+      <p className="mt-2 text-sm text-slate-600">
+        <span className="font-medium text-slate-900">{document.title}</span>, as{" "}
+        <span className="font-medium text-slate-900">
+          {lawyer.name} — {lawyer.title}
+        </span>
+        .
+      </p>
+
+      <dl className="mt-5 grid grid-cols-3 gap-3 text-center">
+        {[
+          { label: "Completed", value: allowance.completed },
+          { label: "Reserved", value: allowance.reserved },
+          { label: "Available", value: allowance.available },
+        ].map((item) => (
+          <div key={item.label} className="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-200">
+            <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              {item.label}
+            </dt>
+            <dd className="mt-1 text-2xl font-semibold text-slate-950">{item.value}</dd>
+          </div>
+        ))}
+      </dl>
+      <p className="mt-3 text-sm text-slate-600">
+        A successful review consumes one reserved slot; a failed review releases it.
+      </p>
+
+      {!availability.canRequest && (
+        <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900" role="status">
+          {availability.message}
+        </p>
+      )}
+      {conflictMessage && (
+        <p className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900" role="alert">
+          {conflictMessage}
+        </p>
+      )}
+
+      <div className="mt-6 flex justify-end gap-3">
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-lg px-4 py-2.5 text-sm font-semibold text-slate-700 ring-1 ring-slate-300 transition hover:bg-slate-50"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={() => mutation.mutate()}
+          disabled={!availability.canRequest || mutation.isPending}
+          className="rounded-lg bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {mutation.isPending ? "Requesting…" : "Request review"}
+        </button>
+      </div>
+    </ModalShell>
+  );
+}
+
+function SeverityTag({ severity }: { severity: "low" | "medium" | "high" }) {
+  const styles = {
+    high: "bg-rose-50 text-rose-700",
+    medium: "bg-amber-50 text-amber-700",
+    low: "bg-slate-100 text-slate-700",
+  } as const;
+  return (
+    <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ${styles[severity]}`}>
+      {severity}
+    </span>
+  );
+}
+
+function FindingsList({
+  findings,
+}: {
+  findings: FindingSnapshot[];
+}) {
+  return (
+    <ul className="mt-4 space-y-3">
+      {findings.map((finding) => (
+        <li key={finding.position} className="rounded-xl border border-slate-200 p-4">
+          <div className="flex items-start justify-between gap-3">
+            <h4 className="text-sm font-semibold text-slate-950">
+              {finding.clause ? `${finding.clause} — ` : ""}
+              {finding.title}
+            </h4>
+            <SeverityTag severity={finding.severity} />
+          </div>
+          {finding.excerpt && (
+            <blockquote className="mt-2 border-l-2 border-slate-300 pl-3 text-sm italic text-slate-600">
+              {finding.excerpt}
+            </blockquote>
+          )}
+          <p className="mt-2 text-sm text-slate-700">{finding.explanation}</p>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function ReviewResultPanel({
+  reviewId,
+  onClose,
+}: {
+  reviewId: string;
+  onClose: () => void;
+}) {
+  const queryClient = useQueryClient();
+  const query = useQuery(reviewQueryOptions(reviewId, { enabled: true }));
+  const status = query.data?.status;
+
+  useEffect(() => {
+    if (status && isTerminalStatus(status)) {
+      void queryClient.invalidateQueries({ queryKey: WORKSPACE_QUERY_KEY });
+    }
+  }, [status, queryClient]);
+
+  return (
+    <ModalShell labelledBy="review-result-title" onClose={onClose}>
+      <div className="flex items-start justify-between gap-4">
+        <h2 id="review-result-title" className="text-xl font-semibold text-slate-950">
+          Review result
+        </h2>
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-lg px-3 py-1.5 text-sm font-semibold text-slate-700 ring-1 ring-slate-300 transition hover:bg-slate-50"
+        >
+          Close
+        </button>
+      </div>
+
+      <div className="mt-5 max-h-[60vh] overflow-y-auto">
+        <ReviewResultBody query={query} />
+      </div>
+      {query.isRefetchError && query.data && (
+        <p className="mt-4 text-sm text-amber-800" role="status">
+          The latest refresh failed. This result may be out of date.
+        </p>
+      )}
+    </ModalShell>
+  );
+}
+
+function ReviewResultBody({
+  query,
+}: {
+  query: ReturnType<typeof useQuery<ReviewSnapshot>>;
+}) {
+  if (query.isPending) {
+    return (
+      <p className="text-sm text-slate-600" aria-busy="true">
+        Loading the review…
+      </p>
+    );
+  }
+  if (!query.data) {
+    return (
+      <div role="alert">
+        <p className="text-sm text-rose-700">
+          {query.error instanceof Error
+            ? query.error.message
+            : "The review could not be loaded."}
+        </p>
+        <button
+          type="button"
+          onClick={() => void query.refetch()}
+          className="mt-3 rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white"
+        >
+          Try again
+        </button>
+      </div>
+    );
+  }
+
+  const presentation = resolveReviewPresentation(query.data);
+  if (presentation.kind === "running") {
+    return (
+      <div>
+        <div className="flex items-center gap-3">
+          <p className="text-sm font-semibold text-indigo-700">
+            Review in progress — preliminary findings
+          </p>
+          <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800">
+            Not final
+          </span>
+        </div>
+        {presentation.findings.length === 0 ? (
+          <p className="mt-4 text-sm text-slate-600">No findings yet.</p>
+        ) : (
+          <FindingsList findings={presentation.findings} />
+        )}
+      </div>
+    );
+  }
+  if (presentation.kind === "completed-empty") {
+    return <p className="text-base font-medium text-emerald-700">No issues flagged</p>;
+  }
+  if (presentation.kind === "completed") {
+    return (
+      <div>
+        <p className="text-sm font-semibold text-emerald-700">Completed review</p>
+        <FindingsList findings={presentation.findings} />
+      </div>
+    );
+  }
+  return (
+    <p className="text-sm font-medium text-rose-700" role="alert">
+      {presentation.message}
+    </p>
   );
 }
 
@@ -228,6 +613,15 @@ function WorkspaceReady({
       writeSelectedLawyerId(activeLawyerId);
     }
   }, [activeLawyerId, selectedLawyerId]);
+
+  const [dialogDocumentId, setDialogDocumentId] = useState<string | null>(null);
+  const [openReviewId, setOpenReviewId] = useState<string | null>(null);
+
+  const activeLawyer = lawyersById.get(activeLawyerId);
+  const dialogDocument = dialogDocumentId
+    ? snapshot.documents.find((document) => document.id === dialogDocumentId) ??
+      null
+    : null;
 
   return (
     <main className="mx-auto w-full max-w-6xl px-5 py-10 sm:px-8 lg:py-16">
@@ -305,11 +699,32 @@ function WorkspaceReady({
                 key={document.id}
                 document={document}
                 uploader={lawyersById.get(document.uploadedByLawyerId)}
+                onRequest={() => setDialogDocumentId(document.id)}
+                onView={(reviewId) => setOpenReviewId(reviewId)}
               />
             ))}
           </ul>
         )}
       </section>
+
+      {dialogDocument && activeLawyer && (
+        <ReviewConfirmationDialog
+          document={dialogDocument}
+          lawyer={activeLawyer}
+          allowance={snapshot.monthlyAllowance}
+          onClose={() => setDialogDocumentId(null)}
+          onCreated={(reviewId) => {
+            setDialogDocumentId(null);
+            setOpenReviewId(reviewId);
+          }}
+        />
+      )}
+      {openReviewId && (
+        <ReviewResultPanel
+          reviewId={openReviewId}
+          onClose={() => setOpenReviewId(null)}
+        />
+      )}
     </main>
   );
 }
