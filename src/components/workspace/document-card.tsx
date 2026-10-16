@@ -47,7 +47,7 @@ export function DocumentCard({
   document: Document;
   uploader: Lawyer | undefined;
   onRequest: () => void;
-  onView: (reviewId: string) => void;
+  onView: () => void;
 }) {
   const attempt = document.latestReviewAttempt;
   const label = reviewActionLabel(attempt);
@@ -82,7 +82,7 @@ export function DocumentCard({
         {running ? (
           <button
             type="button"
-            onClick={() => onView(attempt!.id)}
+            onClick={onView}
             className="rounded-lg bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-950"
           >
             Review in progress
@@ -99,7 +99,7 @@ export function DocumentCard({
         {attempt && !running && (
           <button
             type="button"
-            onClick={() => onView(attempt.id)}
+            onClick={onView}
             className="rounded-lg px-4 py-2.5 text-sm font-semibold text-slate-700 ring-1 ring-slate-300 transition hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-950"
           >
             View result

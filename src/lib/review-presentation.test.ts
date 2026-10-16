@@ -6,6 +6,7 @@ import {
   isTerminalStatus,
   resolveReviewPresentation,
   reviewActionLabel,
+  reviewIdsToOpen,
   REVIEW_FAILURE_MESSAGES,
 } from "./review-presentation";
 
@@ -24,6 +25,60 @@ function allowance(partial: {
 }) {
   return { month: "2026-10", limit: 10, ...partial };
 }
+
+describe("reviewIdsToOpen", () => {
+  const completed: ReviewSummary = {
+    ...base,
+    status: "completed",
+    completedAt: "2026-10-16T12:00:30.000Z",
+    findingCount: 2,
+  };
+
+  it("loads a shared latest and successful review only once", () => {
+    expect(
+      reviewIdsToOpen({
+        latestReviewAttempt: completed,
+        latestSuccessfulReview: completed,
+      }),
+    ).toEqual({
+      latestReviewId: "review-1",
+      previousSuccessfulReviewId: null,
+    });
+  });
+
+  it("keeps a previous success separate from a newer attempt", () => {
+    expect(
+      reviewIdsToOpen({
+        latestReviewAttempt: {
+          ...base,
+          id: "review-2",
+          status: "failed",
+          failedAt: "2026-10-16T12:01:30.000Z",
+          failureReason: "ai_error",
+        },
+        latestSuccessfulReview: completed,
+      }),
+    ).toEqual({
+      latestReviewId: "review-2",
+      previousSuccessfulReviewId: "review-1",
+    });
+  });
+
+  it("opens a newly created review while retaining the summarized success", () => {
+    expect(
+      reviewIdsToOpen(
+        {
+          latestReviewAttempt: completed,
+          latestSuccessfulReview: completed,
+        },
+        "review-2",
+      ),
+    ).toEqual({
+      latestReviewId: "review-2",
+      previousSuccessfulReviewId: "review-1",
+    });
+  });
+});
 
 describe("reviewActionLabel", () => {
   it("maps the latest attempt to the document action", () => {

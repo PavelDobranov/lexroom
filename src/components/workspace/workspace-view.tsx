@@ -9,6 +9,7 @@ import {
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 import type { WorkspaceSnapshot } from "../../shared/api";
+import { reviewIdsToOpen } from "../../lib/review-presentation";
 import {
   readSelectedLawyerId,
   resolveSelectedLawyerId,
@@ -83,13 +84,23 @@ function WorkspaceReady({
   }, [activeLawyerId, selectedLawyerId]);
 
   const [dialogDocumentId, setDialogDocumentId] = useState<string | null>(null);
-  const [openReviewId, setOpenReviewId] = useState<string | null>(null);
+  const [openReview, setOpenReview] = useState<{
+    documentId: string;
+    latestReviewId?: string;
+  } | null>(null);
 
   const activeLawyer = lawyersById.get(activeLawyerId);
   const dialogDocument = dialogDocumentId
     ? snapshot.documents.find((document) => document.id === dialogDocumentId) ??
       null
     : null;
+  const openDocument = openReview
+    ? snapshot.documents.find((document) => document.id === openReview.documentId) ??
+      null
+    : null;
+  const reviewIds = openDocument
+    ? reviewIdsToOpen(openDocument, openReview?.latestReviewId)
+    : { latestReviewId: null, previousSuccessfulReviewId: null };
 
   return (
     <main className="mx-auto w-full max-w-6xl px-5 py-10 sm:px-8 lg:py-16">
@@ -168,7 +179,7 @@ function WorkspaceReady({
                 document={document}
                 uploader={lawyersById.get(document.uploadedByLawyerId)}
                 onRequest={() => setDialogDocumentId(document.id)}
-                onView={(reviewId) => setOpenReviewId(reviewId)}
+                onView={() => setOpenReview({ documentId: document.id })}
               />
             ))}
           </ul>
@@ -183,16 +194,20 @@ function WorkspaceReady({
           onClose={() => setDialogDocumentId(null)}
           onCreated={(reviewId) => {
             setDialogDocumentId(null);
-            setOpenReviewId(reviewId);
+            setOpenReview({
+              documentId: dialogDocument.id,
+              latestReviewId: reviewId,
+            });
           }}
         />
       )}
-      {openReviewId && (
+      {openReview && reviewIds.latestReviewId && (
         <ReviewResultPanel
-          reviewId={openReviewId}
-          onClose={() => setOpenReviewId(null)}
+          latestReviewId={reviewIds.latestReviewId}
+          latestSuccessfulReviewId={reviewIds.previousSuccessfulReviewId}
+          onClose={() => setOpenReview(null)}
           onRetry={(documentId) => {
-            setOpenReviewId(null);
+            setOpenReview(null);
             setDialogDocumentId(documentId);
           }}
         />
