@@ -235,6 +235,8 @@ The recorded AI sessions below preserve the conversations from which these artif
 
 The assignment explicitly requests the logs of AI-assisted development. The exported coding-agent sessions are collected under [`docs/sessions/`](docs/sessions/).
 
+The harness is the **pi coding agent**, and the sessions are extracted raw — these are the unedited exports as produced by the harness, not cleaned-up or reconstructed transcripts.
+
 These JSONL files preserve the original interaction history, including agent questions, proposed approaches, decisions, implementation discussions, and iterations. Any personal or confidential information must be removed before submission.
 
 The GitHub Issues contain the finalized, structured decisions; the session exports document how those decisions were reached.
