@@ -1,0 +1,473 @@
+[
+  {
+    "id": "639fb780-cfdf-4393-bf6e-6a330940b21e",
+    "title": "Non-disclosure agreement — Alfa Robotics S.r.l.",
+    "type": "nda",
+    "pages": 4,
+    "uploadedAt": "2026-09-01T08:42:00Z",
+    "uploadedBy": "3b9d2e1f-6a7c-4d8e-b0f1-9a2b3c4d5e6f",
+    "supersedes": null,
+    "findings": [
+      {
+        "clause": "5.1",
+        "title": "Liability is not capped",
+        "severity": "high",
+        "excerpt": "The Receiving Party shall indemnify the Disclosing Party against any and all losses, without limitation.",
+        "explanation": "An uncapped indemnity exposes the client to damages far beyond the value of the relationship. Propose a cap, for example the fees paid in the previous 12 months, and exclude indirect damages."
+      },
+      {
+        "clause": "3.2",
+        "title": "Confidentiality never expires",
+        "severity": "medium",
+        "excerpt": "The obligations under this Agreement shall survive indefinitely.",
+        "explanation": "Perpetual obligations are hard to comply with and to enforce. A term of 3 to 5 years after disclosure is common, with longer protection only for trade secrets."
+      },
+      {
+        "clause": null,
+        "title": "No governing law or jurisdiction",
+        "severity": "low",
+        "excerpt": null,
+        "explanation": "The agreement does not say which law applies or which court decides disputes. Add both, so that a dispute does not start with a dispute about where to litigate."
+      }
+    ]
+  },
+  {
+    "id": "125c8706-e702-4d6f-b2c5-80aeb110cd5c",
+    "title": "Commercial lease — Via Tortona 12, Milan",
+    "type": "lease",
+    "pages": 18,
+    "uploadedAt": "2026-09-03T14:05:00Z",
+    "uploadedBy": "e4a8b6c2-1d3f-4a5b-9c7e-2f8a9b0c1d2e",
+    "supersedes": null,
+    "findings": [
+      {
+        "clause": "8.3",
+        "title": "Tenant pays for structural repairs",
+        "severity": "high",
+        "excerpt": "All maintenance and repair works, including those relating to the structure of the building, shall be borne by the Tenant.",
+        "explanation": "Structural and extraordinary repairs are normally the landlord's responsibility. Shifting them to the tenant can cost more than the rent itself; limit the tenant's duty to ordinary maintenance."
+      },
+      {
+        "clause": "4.2",
+        "title": "Rent indexed at 100% of inflation",
+        "severity": "medium",
+        "excerpt": "The rent shall be updated every year by 100% of the change in the consumer price index.",
+        "explanation": "For this type of lease, indexation above 75% of the ISTAT index may not be allowed. Verify it and negotiate the percentage down."
+      }
+    ]
+  },
+  {
+    "id": "a8d4c1e0-5f3b-4b7a-9e2d-6c1f0b3a7d58",
+    "title": "Commercial lease — Via Tortona 12, Milan",
+    "type": "lease",
+    "pages": 19,
+    "uploadedAt": "2026-09-24T10:15:00Z",
+    "uploadedBy": "e4a8b6c2-1d3f-4a5b-9c7e-2f8a9b0c1d2e",
+    "supersedes": "125c8706-e702-4d6f-b2c5-80aeb110cd5c",
+    "findings": [
+      {
+        "clause": "4.2",
+        "title": "Rent indexed at 100% of inflation",
+        "severity": "medium",
+        "excerpt": "The rent shall be updated every year by 100% of the change in the consumer price index.",
+        "explanation": "For this type of lease, indexation above 75% of the ISTAT index may not be allowed. Verify it and negotiate the percentage down."
+      },
+      {
+        "clause": "12.1",
+        "title": "Break option for the landlord only",
+        "severity": "high",
+        "excerpt": "The Landlord may withdraw from this Agreement at any time by giving six months' written notice. No corresponding right is granted to the Tenant.",
+        "explanation": "Once the tenant has fitted out the premises, a one-sided break option leaves it exposed to losing the investment on short notice. Ask for a reciprocal option, or for the reimbursement of the fit-out costs not yet amortised."
+      }
+    ]
+  },
+  {
+    "id": "eb07c3a3-6967-4de6-bd82-3930f49ecf5c",
+    "title": "Employment contract — Senior Software Engineer",
+    "type": "employment",
+    "pages": 9,
+    "uploadedAt": "2026-09-04T09:30:00Z",
+    "uploadedBy": "7c1f3d2a-9b64-4e0f-8a21-5d3e6f7a8b90",
+    "supersedes": null,
+    "findings": [
+      {
+        "clause": "12",
+        "title": "Non-compete without compensation",
+        "severity": "high",
+        "excerpt": "For 36 months after termination, the Employee shall not work for any competitor in the European Union.",
+        "explanation": "A post-employment non-compete must be limited in time, place and activity, and it must be paid. Without compensation it is likely void, and three years across the whole EU is very broad."
+      },
+      {
+        "clause": "6.4",
+        "title": "Overtime included in the salary with no limit",
+        "severity": "medium",
+        "excerpt": "The salary covers any overtime work requested by the Company.",
+        "explanation": "An all-inclusive clause without a cap on hours can be challenged. State how many overtime hours the salary covers."
+      }
+    ]
+  },
+  {
+    "id": "d6c1f51a-a15e-4502-923a-656eed71bcc7",
+    "title": "SaaS subscription agreement — CloudDocs Ltd",
+    "type": "saas",
+    "pages": 14,
+    "uploadedAt": "2026-09-05T11:12:00Z",
+    "uploadedBy": "3b9d2e1f-6a7c-4d8e-b0f1-9a2b3c4d5e6f",
+    "supersedes": null,
+    "findings": [
+      {
+        "clause": "2.4",
+        "title": "The provider can change the terms unilaterally",
+        "severity": "high",
+        "excerpt": "The Provider may amend these Terms at any time by giving 7 days' notice by email.",
+        "explanation": "The client cannot plan on terms that can change with a week's notice. Require consent for material changes, or a right to terminate with a refund."
+      },
+      {
+        "clause": null,
+        "title": "No data processing agreement",
+        "severity": "high",
+        "excerpt": null,
+        "explanation": "The provider will process personal data of the client's customers, but there are no data processing terms under article 28 of the GDPR. They should be signed before going live."
+      },
+      {
+        "clause": "14.1",
+        "title": "Automatic renewal for 36 months",
+        "severity": "medium",
+        "excerpt": "The subscription renews automatically for successive periods of 36 months unless terminated with 90 days' notice.",
+        "explanation": "A long renewal term with a long notice period locks the client in. Ask for 12-month renewals and a 30-day notice."
+      },
+      {
+        "clause": "7.3",
+        "title": "Service levels without service credits",
+        "severity": "low",
+        "excerpt": "The Provider will use reasonable efforts to achieve 99.5% availability.",
+        "explanation": "A target without service credits or a termination right cannot be enforced in practice."
+      }
+    ]
+  },
+  {
+    "id": "9545d54a-7e23-4b56-b2a3-01bf5d3b326f",
+    "title": "Supply agreement — Beta Components S.p.A.",
+    "type": "supply",
+    "pages": 22,
+    "uploadedAt": "2026-09-08T16:48:00Z",
+    "uploadedBy": "e4a8b6c2-1d3f-4a5b-9c7e-2f8a9b0c1d2e",
+    "supersedes": null,
+    "findings": [
+      {
+        "clause": "13.2",
+        "title": "Force majeure includes staff shortages",
+        "severity": "medium",
+        "excerpt": "Force majeure includes, without limitation, strikes, lack of personnel and shortage of raw materials.",
+        "explanation": "Staff and material shortages are business risks the supplier controls. Listing them as force majeure lets the supplier suspend deliveries without liability."
+      },
+      {
+        "clause": "5.1",
+        "title": "Prices revised at the supplier's discretion",
+        "severity": "medium",
+        "excerpt": "Prices may be revised by the Supplier from time to time.",
+        "explanation": "Without a formula or a cap, the price is effectively open. Tie revisions to an index and give the buyer a right to terminate."
+      },
+      {
+        "clause": "7",
+        "title": "Delivery terms not defined",
+        "severity": "low",
+        "excerpt": "Goods shall be delivered to the Buyer's premises.",
+        "explanation": "It is unclear who bears the risk during transport. Refer to an Incoterms rule, for example DAP."
+      }
+    ]
+  },
+  {
+    "id": "a2e76f66-7b0c-42a5-bbe3-7e057840becb",
+    "title": "Distribution agreement — Gamma Foods GmbH",
+    "type": "distribution",
+    "pages": 16,
+    "uploadedAt": "2026-09-09T10:20:00Z",
+    "uploadedBy": "7c1f3d2a-9b64-4e0f-8a21-5d3e6f7a8b90",
+    "supersedes": null,
+    "findings": [
+      {
+        "clause": "4.3",
+        "title": "Immediate termination if a target is missed",
+        "severity": "high",
+        "excerpt": "If the Distributor fails to reach the minimum purchase target in any quarter, the Supplier may terminate this Agreement with immediate effect.",
+        "explanation": "One bad quarter can end the relationship with no time to fix it. Ask for a yearly target and a cure period before termination."
+      },
+      {
+        "clause": "15",
+        "title": "No indemnity when the agreement ends",
+        "severity": "medium",
+        "excerpt": "No indemnity of any kind shall be due to the Distributor upon termination.",
+        "explanation": "The distributor builds the customer base and gets nothing when the agreement ends. Consider a goodwill indemnity or a buy-back of the remaining stock."
+      },
+      {
+        "clause": "18.2",
+        "title": "The German version prevails",
+        "severity": "low",
+        "excerpt": "In case of discrepancies, the German version shall prevail.",
+        "explanation": "If the client negotiates in English or Italian, the prevailing version should be one it can read."
+      }
+    ]
+  },
+  {
+    "id": "077070a7-519b-411e-a466-3c97db7f07ff",
+    "title": "Consulting agreement — Delta Advisory S.r.l.",
+    "type": "services",
+    "pages": 6,
+    "uploadedAt": "2026-09-10T08:05:00Z",
+    "uploadedBy": "3b9d2e1f-6a7c-4d8e-b0f1-9a2b3c4d5e6f",
+    "supersedes": null,
+    "findings": []
+  },
+  {
+    "id": "3ce07ee8-540f-4598-be28-038ff929e704",
+    "title": "Loan agreement — Epsilon Capital S.p.A.",
+    "type": "loan",
+    "pages": 11,
+    "uploadedAt": "2026-09-11T13:37:00Z",
+    "uploadedBy": "7c1f3d2a-9b64-4e0f-8a21-5d3e6f7a8b90",
+    "supersedes": null,
+    "findings": [
+      {
+        "clause": "10.1",
+        "title": "Cross-default on any group debt",
+        "severity": "high",
+        "excerpt": "An Event of Default occurs if any company of the Borrower's group fails to pay any financial debt when due.",
+        "explanation": "A late payment by any group company, for any amount, makes the whole loan due. Limit it to material debts above a threshold."
+      },
+      {
+        "clause": "6.2",
+        "title": "Default interest may exceed the legal limit",
+        "severity": "high",
+        "excerpt": "Late payments shall bear interest at 18% per year.",
+        "explanation": "In Italy, interest above the usury threshold can be void. Check the rate against the current threshold for this type of loan."
+      },
+      {
+        "clause": "10.3",
+        "title": "Acceleration at the lender's discretion",
+        "severity": "medium",
+        "excerpt": "The Lender may declare the loan immediately due if, in its opinion, the Borrower's financial condition deteriorates.",
+        "explanation": "A subjective trigger gives the lender a unilateral exit. Replace it with objective financial covenants."
+      }
+    ]
+  },
+  {
+    "id": "62e00294-3d4d-4db0-b3a3-52c2e38f2d8b",
+    "title": "Shareholders' agreement — Zeta Labs S.r.l.",
+    "type": "shareholders",
+    "pages": 25,
+    "uploadedAt": "2026-09-14T15:10:00Z",
+    "uploadedBy": "7c1f3d2a-9b64-4e0f-8a21-5d3e6f7a8b90",
+    "supersedes": null,
+    "findings": [
+      {
+        "clause": "8.1",
+        "title": "Drag-along with no minimum price",
+        "severity": "high",
+        "excerpt": "Shareholders holding 60% of the shares may require all other shareholders to sell their shares to a third-party buyer.",
+        "explanation": "Minority shareholders can be forced to sell at any price. Add a floor, for example the fair market value set by an independent expert."
+      },
+      {
+        "clause": "2",
+        "title": "Term longer than the legal maximum",
+        "severity": "medium",
+        "excerpt": "This Agreement shall remain in force for 10 years.",
+        "explanation": "Under Italian law, shareholders' agreements of this kind last at most 5 years, and a longer term is reduced to 5. State the renewal rules instead."
+      },
+      {
+        "clause": null,
+        "title": "No deadlock mechanism",
+        "severity": "medium",
+        "excerpt": null,
+        "explanation": "With two shareholders at 50%, a disagreement can block the company. Add an escalation step and a buy-sell mechanism."
+      }
+    ]
+  },
+  {
+    "id": "9784adfe-962b-4ff6-b447-ad43e1beb949",
+    "title": "Software license agreement — Eta Systems",
+    "type": "license",
+    "pages": 8,
+    "uploadedAt": "2026-09-15T09:55:00Z",
+    "uploadedBy": "e4a8b6c2-1d3f-4a5b-9c7e-2f8a9b0c1d2e",
+    "supersedes": null,
+    "findings": [
+      {
+        "clause": "9.1",
+        "title": "Audit with 24 hours' notice",
+        "severity": "medium",
+        "excerpt": "The Licensor may audit the Licensee's use of the Software upon 24 hours' notice.",
+        "explanation": "One day is too short to prepare and can disrupt operations. Ask for at least 30 days' notice, at most once a year, during business hours."
+      },
+      {
+        "clause": "3.2",
+        "title": "Licenses tied to named users",
+        "severity": "low",
+        "excerpt": "Each license is assigned to a named user and cannot be transferred.",
+        "explanation": "When people leave the firm, their licenses are lost. Ask for the right to reassign them."
+      }
+    ]
+  },
+  {
+    "id": "e43b9cdd-2d6d-4859-ac1a-93ea777fe2f8",
+    "title": "Settlement agreement — Theta S.r.l. and Iota S.p.A.",
+    "type": "settlement",
+    "pages": 3,
+    "uploadedAt": "2026-09-17T17:22:00Z",
+    "uploadedBy": "7c1f3d2a-9b64-4e0f-8a21-5d3e6f7a8b90",
+    "supersedes": null,
+    "findings": [
+      {
+        "clause": "2.1",
+        "title": "The release also covers future claims",
+        "severity": "high",
+        "excerpt": "Each party releases the other from any claim, known or unknown, past or future, arising from any relationship between them.",
+        "explanation": "The release goes beyond the dispute being settled and may waive claims under other contracts. Limit it to the claims described in the recitals."
+      },
+      {
+        "clause": "5",
+        "title": "Confidentiality with no consequence for a breach",
+        "severity": "low",
+        "excerpt": "The parties shall keep the terms of this settlement confidential.",
+        "explanation": "Without a penalty, a breach is hard to act on. Consider a fixed penalty clause."
+      }
+    ]
+  },
+  {
+    "id": "61a3bea4-f6cf-4854-92b6-671ae1349309",
+    "title": "Franchise agreement — Kappa Coffee S.r.l.",
+    "type": "franchise",
+    "pages": 30,
+    "uploadedAt": "2026-09-21T12:00:00Z",
+    "uploadedBy": "e4a8b6c2-1d3f-4a5b-9c7e-2f8a9b0c1d2e",
+    "supersedes": null,
+    "findings": [
+      {
+        "clause": "16.1",
+        "title": "The franchisor may terminate without cause",
+        "severity": "high",
+        "excerpt": "The Franchisor may terminate this Agreement at any time by giving 30 days' written notice.",
+        "explanation": "The franchisee invests in the premises and the brand, and can lose everything with a month's notice. Limit termination to specific breaches, or add a compensation."
+      },
+      {
+        "clause": "3.1",
+        "title": "Exclusive territory can be reduced at will",
+        "severity": "high",
+        "excerpt": "The Franchisor may at any time amend the Territory, including by opening or authorising other outlets within it.",
+        "explanation": "An exclusive territory that the franchisor can shrink is no exclusivity at all. Ask for a fixed territory for the whole term, or at least a right of first refusal on any new outlet within it."
+      },
+      {
+        "clause": "4.2",
+        "title": "The entry fee is never refunded",
+        "severity": "high",
+        "excerpt": "The entry fee is not refundable under any circumstances.",
+        "explanation": "The fee is kept even if the franchisor never delivers the territory or the training. Make it refundable when the franchisor does not perform."
+      },
+      {
+        "clause": "15.3",
+        "title": "Liquidated damages of 24 months of royalties for any breach",
+        "severity": "high",
+        "excerpt": "In case of any breach, the Franchisee shall pay liquidated damages equal to 24 months of royalties, without prejudice to further damages.",
+        "explanation": "A fixed penalty for any breach, even a minor one, on top of further damages, is disproportionate and a court may reduce it. Limit it to material breaches and negotiate the amount down."
+      },
+      {
+        "clause": "13.2",
+        "title": "Unlimited personal guarantee by the franchisee's owner",
+        "severity": "high",
+        "excerpt": "The shareholder of the Franchisee personally and unconditionally guarantees all obligations under this Agreement, without limit of amount or time.",
+        "explanation": "An unlimited and perpetual personal guarantee exposes the owner's private assets beyond the life of the business. Cap it to a fixed amount and to the term of the agreement."
+      },
+      {
+        "clause": "7.1",
+        "title": "Mandatory suppliers at prices set by the franchisor",
+        "severity": "medium",
+        "excerpt": "The Franchisee shall buy all products exclusively from suppliers appointed by the Franchisor, at the prices communicated by the Franchisor.",
+        "explanation": "The franchisee's margins depend entirely on prices it cannot negotiate. Ask for a price mechanism tied to the market, or a right to use equivalent suppliers."
+      },
+      {
+        "clause": "18.2",
+        "title": "Resale prices fixed by the franchisor",
+        "severity": "medium",
+        "excerpt": "The Franchisee shall apply the retail prices set out in the Franchisor's price list.",
+        "explanation": "Imposing fixed or minimum resale prices is a hardcore restriction under EU competition rules: the clause is likely void and exposes both parties. Make the price list a recommendation."
+      },
+      {
+        "clause": "5.2",
+        "title": "Royalty on gross receipts, including VAT and refunds",
+        "severity": "medium",
+        "excerpt": "The Franchisee shall pay a royalty of 6% of gross receipts, before any discount, refund or tax.",
+        "explanation": "A royalty computed before VAT, refunds and promotional discounts inflates the base. Define turnover net of VAT, refunded sales and discounts."
+      },
+      {
+        "clause": "17.3",
+        "title": "Five-year non-compete after the end",
+        "severity": "medium",
+        "excerpt": "For five years after termination, the Franchisee shall not operate any coffee shop in Italy.",
+        "explanation": "Five years across the whole country is likely excessive. Limit it to one year and to the area of the franchised shop."
+      },
+      {
+        "clause": "6.3",
+        "title": "Renewal at the franchisor's discretion, against a new entry fee",
+        "severity": "medium",
+        "excerpt": "Renewal is subject to the Franchisor's approval and to the payment of a renewal fee equal to the entry fee then in force.",
+        "explanation": "The franchisee has no right to renew and pays the full entry fee again. Ask for a right to renew on the same terms when not in breach, and for a reduced fee."
+      },
+      {
+        "clause": "9.1",
+        "title": "Unilateral changes to the operations manual",
+        "severity": "medium",
+        "excerpt": "The Franchisor may amend the Operations Manual at any time, and amendments bind the Franchisee upon notice.",
+        "explanation": "The manual sets costs: fit-out, menu, equipment. Unlimited amendments mean unlimited mandatory investments. Require a notice period and a yearly cap on the investments the manual can impose."
+      },
+      {
+        "clause": "10.2",
+        "title": "Minimum purchase obligation with no sales guarantee",
+        "severity": "medium",
+        "excerpt": "The Franchisee shall purchase a minimum of EUR 120,000 of products per year, regardless of actual sales.",
+        "explanation": "A fixed minimum unrelated to sales shifts the whole demand risk to the franchisee. Tie the minimum to a percentage of actual turnover, or add a step-up in the first years."
+      },
+      {
+        "clause": "16.4",
+        "title": "Buy-back of the equipment at book value",
+        "severity": "medium",
+        "excerpt": "Upon termination, the Franchisor may take over the lease of the premises and buy the equipment at its net book value.",
+        "explanation": "Book value is usually far below what the franchisee paid for fit-out and equipment. Ask for fair market value, or for the right to sell to a third party."
+      },
+      {
+        "clause": "8.4",
+        "title": "Marketing fund without reporting",
+        "severity": "low",
+        "excerpt": "The Franchisee shall contribute 2% of its turnover to the marketing fund managed by the Franchisor.",
+        "explanation": "There is no obligation to report how the fund is spent. Ask for a yearly statement."
+      },
+      {
+        "clause": "11.4",
+        "title": "The franchisor owns the customer data",
+        "severity": "low",
+        "excerpt": "All customer data collected in the Outlet are the exclusive property of the Franchisor.",
+        "explanation": "After termination the franchisee loses its own customer base, and the clause ignores joint controllership under data protection law. Ask for shared use of the data and a data processing agreement."
+      },
+      {
+        "clause": "14.1",
+        "title": "Assignment forbidden for the franchisee, free for the franchisor",
+        "severity": "low",
+        "excerpt": "The Franchisee may not assign this Agreement. The Franchisor may assign it to any third party without the Franchisee's consent.",
+        "explanation": "The franchisee cannot sell its business, while the franchisor can hand the relationship to anyone, even a competitor. Ask for assignment with consent not to be unreasonably withheld, on both sides."
+      },
+      {
+        "clause": "20",
+        "title": "Disputes before a foreign court",
+        "severity": "low",
+        "excerpt": "Any dispute shall be settled exclusively by the courts of Luxembourg.",
+        "explanation": "Litigating abroad raises costs for an Italian franchisee. Prefer an Italian court or arbitration seated in Italy."
+      },
+      {
+        "clause": "19.1",
+        "title": "Mandatory training invoiced separately",
+        "severity": "low",
+        "excerpt": "Initial and ongoing training is mandatory and will be invoiced at the Franchisor's then-current rates.",
+        "explanation": "The entry fee usually covers initial training; open-ended mandatory training at undetermined rates is a hidden cost. Include initial training in the fee and cap the yearly cost of ongoing training."
+      }
+    ]
+  }
+]
